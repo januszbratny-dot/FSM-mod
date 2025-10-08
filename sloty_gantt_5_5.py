@@ -182,6 +182,8 @@ if "slot_types" not in st.session_state:
         st.session_state.balance_horizon = "week"
         st.session_state.client_counter = 1
         st.session_state.not_found_counter = 0
+        st.session_state.unscheduled_orders = []
+
 
 # stable keys for widgets (avoid using raw brygada names as keys)
 def brygada_key(i: int, field: str) -> str:
