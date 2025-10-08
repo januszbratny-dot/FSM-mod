@@ -683,7 +683,8 @@ for s in available_slots:
         })
 
 # Sortowanie po czasie startu i brygadzie
-slots_for_display.sort(key=lambda x: (x["start"], x["arrival_window_start"], x["brygada"]
+slots_for_display.sort(key=lambda x: (x["start"], x["arrival_window_start"], x["brygada"]))
+
 
 if not available_slots:
     st.info("Brak dostępnych slotów dla wybranego dnia.")
