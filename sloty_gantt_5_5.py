@@ -542,23 +542,6 @@ st.set_page_config(page_title="Harmonogram slotów", layout="wide")
 st.title("📅 Harmonogram slotów - Tydzień")
 
 with st.sidebar:
-    # week navigation
-    if "week_offset" not in st.session_state:
-        st.session_state.week_offset = 0
-    
-    with st.sidebar:
-        st.subheader("⬅️ Wybór tygodnia")
-        col1, col2 = st.columns(2)
-        if col1.button("‹ Poprzedni tydzień"):
-            st.session_state.week_offset -= 1
-        if col2.button("Następny tydzień ›"):
-            st.session_state.week_offset += 1
-    
-    week_ref = date.today() + timedelta(weeks=st.session_state.week_offset)
-    week_days = get_week_days(week_ref)
-    st.sidebar.write(f"Tydzień: {week_days[0].strftime('%d-%m-%Y')} – {week_days[-1].strftime('%d-%m-%Y')}")
-    
-    
     st.subheader("⚙️ Konfiguracja")
 
     # slot types editor with validation
@@ -602,21 +585,21 @@ with st.sidebar:
         "Czas rezerwowy po (minuty)", min_value=0, max_value=180, value=90, step=5, key="czas_po"
     )
 
-    # week navigation
-    if "week_offset" not in st.session_state:
-        st.session_state.week_offset = 0
-    
-    with st.sidebar:
-        st.subheader("⬅️ Wybór tygodnia")
-        col1, col2 = st.columns(2)
-        if col1.button("‹ Poprzedni tydzień"):
-            st.session_state.week_offset -= 1
-        if col2.button("Następny tydzień ›"):
-            st.session_state.week_offset += 1
-    
-    week_ref = date.today() + timedelta(weeks=st.session_state.week_offset)
-    week_days = get_week_days(week_ref)
-    st.sidebar.write(f"Tydzień: {week_days[0].strftime('%d-%m-%Y')} – {week_days[-1].strftime('%d-%m-%Y')}")
+# week navigation
+if "week_offset" not in st.session_state:
+    st.session_state.week_offset = 0
+
+with st.sidebar:
+    st.subheader("⬅️ Wybór tygodnia")
+    col1, col2 = st.columns(2)
+    if col1.button("‹ Poprzedni tydzień"):
+        st.session_state.week_offset -= 1
+    if col2.button("Następny tydzień ›"):
+        st.session_state.week_offset += 1
+
+week_ref = date.today() + timedelta(weeks=st.session_state.week_offset)
+week_days = get_week_days(week_ref)
+st.sidebar.write(f"Tydzień: {week_days[0].strftime('%d-%m-%Y')} – {week_days[-1].strftime('%d-%m-%Y')}")
 
 # ---------------------- Dodaj klienta (zmieniony UI: wybór dostępnego slotu) ----------------------
 st.subheader("➕ Rezerwacja terminu")
@@ -1152,7 +1135,6 @@ else:
     st.info("Brak slotów do wyświetlenia dla wybranego dnia.")
 
 #--------------
-
 
 
 
