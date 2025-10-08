@@ -833,14 +833,11 @@ else:
 # management: delete individual slots
 st.subheader("🧰 Zarządzaj slotami")
 
-# Nagłówek kolumn
+# Nagłówek kolumn z tłem i pogrubieniem
 header_cols = st.columns([1, 2, 1.2, 2, 1, 1])
-header_cols[0].write("Dzień")
-header_cols[1].write("Klient + Typ")
-header_cols[2].write("Start – Koniec")
-header_cols[3].write("Przedział przyjazdu")
-header_cols[4].write("Brygada")
-header_cols[5].write("Akcje")
+headers = ["Dzień", "Klient + Typ", "Start – Koniec", "Przedział przyjazdu", "Brygada", "Akcje"]
+for col, title in zip(header_cols, headers):
+    col.markdown(f"<div style='background-color:#f0f0f0; font-weight:bold; padding:4px; border-radius:4px;'>{title}</div>", unsafe_allow_html=True)
 
 # Wiersze z danymi
 if not df.empty:
@@ -855,6 +852,7 @@ if not df.empty:
             delete_slot(row["Brygada"], row["Dzień"], row["_id"])
             st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
             st.rerun()
+
 
 # ---------------------- ZLECENIA BEZ TERMINU ----------------------
 st.subheader("⏳ Zlecenia bez terminu - Dyspozytor")
