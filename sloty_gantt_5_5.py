@@ -916,6 +916,80 @@ if not df.empty:
     st.plotly_chart(fig, use_container_width=True)
 
 
+
+
+
+
+
+# ---------------------- PODSUMOWANIE ----------------------
+st.subheader("📌 Podsumowanie")
+st.write(f"✅ Dodano klientów: {len(st.session_state.clients_added)}")
+st.write(f"❌ Brak slotu dla: {st.session_state.not_found_counter}")
+
+# ---------------------- UTILIZATION PER DAY ----------------------
+st.subheader("📊 Wykorzystanie brygad w podziale na dni (%)")
+util_data = []
+for b in st.session_state.brygady:
+    row = {"Brygada": b}
+    wh_start, wh_end = st.session_state.working_hours[b]
+    daily_minutes = _wh_minutes(wh_start, wh_end)
+    for d in week_days:
+        d_str = d.strftime("%Y-%m-%d")
+        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
+        used = sum(s["duration_min"] for s in slots)
+        row[d_str] = round(100 * used / daily_minutes, 1) if daily_minutes > 0 else 0
+    util_data.append(row)
+st.dataframe(pd.DataFrame(util_data))
+
+# ---------------------- TOTAL UTILIZATION ----------------------
+st.subheader("📊 Wykorzystanie brygad (sumarycznie)")
+rows = []
+for b in st.session_state.brygady:
+    total = sum(s["duration_min"] for d in st.session_state.schedules.get(b, {}).values() for s in d)
+    wh_start, wh_end = st.session_state.working_hours[b]
+    daily_minutes = _wh_minutes(wh_start, wh_end)
+    available = daily_minutes * len(week_days)
+    utilization = round(100 * total / available, 1) if available > 0 else 0
+    rows.append({"Brygada": b, "Zajętość [min]": total, "Dostępne [min]": available, "Wykorzystanie [%]": utilization})
+st.table(pd.DataFrame(rows))
+
+# ---------------------- OPTIONAL: BASIC TESTS ----------------------
+
+def _run_basic_tests():
+    """Uruchom prosty sanity test parsers i scheduler logic jeśli uruchomione manualnie.
+    Aby uruchomić: RUN_SCHEDULE_TESTS=1 streamlit run this_file.py
+    """
+    errors = []
+    # parse time
+    try:
+        assert parse_time_str("08:00").hour == 8
+        assert parse_time_str("23:59:59").hour == 23
+    except Exception as e:
+        errors.append(f"parse_time_str failed: {e}")
+
+    # schedule overlapping test
+    test_day = date.today()
+    st.session_state.slot_types = [{"name": "T30", "minutes": 30, "weight": 1}]
+    st.session_state.brygady = ["T1"]
+    st.session_state.working_hours = {"T1": (time(8, 0), time(10, 0))}
+    st.session_state.schedules = {"T1": {}}
+
+    ok1, slot1 = schedule_client_immediately("A", "T30", test_day, time(8, 0), time(10, 0))
+    ok2, slot2 = schedule_client_immediately("B", "T30", test_day, time(8, 0), time(10, 0))
+    ok3, slot3 = schedule_client_immediately("C", "T30", test_day, time(8, 0), time(10, 0))
+    # 2 slots fit in 2 hours if step 30 -> actually 4 slots, depending on step; just check no crash
+    if not ok1 or not ok2:
+        errors.append("Scheduling basic failed")
+
+    if errors:
+        st.error('Testy wykryły błędy: ' + '; '.join(errors))
+    else:
+        st.success('Podstawowe testy przeszły pomyślnie ✅')
+
+if os.environ.get("RUN_SCHEDULE_TESTS"):
+    _run_basic_tests()
+
+
 # ---------------------- GANTT 1-DNIOWY: Praca + Przedział przyjazdu ----------------------
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu")
 
@@ -1056,74 +1130,3 @@ for b in st.session_state.brygady:
 
     st.markdown(f"### Brygada: {b}")
     st.plotly_chart(fig_day, use_container_width=True)
-
-
-
-
-# ---------------------- PODSUMOWANIE ----------------------
-st.subheader("📌 Podsumowanie")
-st.write(f"✅ Dodano klientów: {len(st.session_state.clients_added)}")
-st.write(f"❌ Brak slotu dla: {st.session_state.not_found_counter}")
-
-# ---------------------- UTILIZATION PER DAY ----------------------
-st.subheader("📊 Wykorzystanie brygad w podziale na dni (%)")
-util_data = []
-for b in st.session_state.brygady:
-    row = {"Brygada": b}
-    wh_start, wh_end = st.session_state.working_hours[b]
-    daily_minutes = _wh_minutes(wh_start, wh_end)
-    for d in week_days:
-        d_str = d.strftime("%Y-%m-%d")
-        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-        used = sum(s["duration_min"] for s in slots)
-        row[d_str] = round(100 * used / daily_minutes, 1) if daily_minutes > 0 else 0
-    util_data.append(row)
-st.dataframe(pd.DataFrame(util_data))
-
-# ---------------------- TOTAL UTILIZATION ----------------------
-st.subheader("📊 Wykorzystanie brygad (sumarycznie)")
-rows = []
-for b in st.session_state.brygady:
-    total = sum(s["duration_min"] for d in st.session_state.schedules.get(b, {}).values() for s in d)
-    wh_start, wh_end = st.session_state.working_hours[b]
-    daily_minutes = _wh_minutes(wh_start, wh_end)
-    available = daily_minutes * len(week_days)
-    utilization = round(100 * total / available, 1) if available > 0 else 0
-    rows.append({"Brygada": b, "Zajętość [min]": total, "Dostępne [min]": available, "Wykorzystanie [%]": utilization})
-st.table(pd.DataFrame(rows))
-
-# ---------------------- OPTIONAL: BASIC TESTS ----------------------
-
-def _run_basic_tests():
-    """Uruchom prosty sanity test parsers i scheduler logic jeśli uruchomione manualnie.
-    Aby uruchomić: RUN_SCHEDULE_TESTS=1 streamlit run this_file.py
-    """
-    errors = []
-    # parse time
-    try:
-        assert parse_time_str("08:00").hour == 8
-        assert parse_time_str("23:59:59").hour == 23
-    except Exception as e:
-        errors.append(f"parse_time_str failed: {e}")
-
-    # schedule overlapping test
-    test_day = date.today()
-    st.session_state.slot_types = [{"name": "T30", "minutes": 30, "weight": 1}]
-    st.session_state.brygady = ["T1"]
-    st.session_state.working_hours = {"T1": (time(8, 0), time(10, 0))}
-    st.session_state.schedules = {"T1": {}}
-
-    ok1, slot1 = schedule_client_immediately("A", "T30", test_day, time(8, 0), time(10, 0))
-    ok2, slot2 = schedule_client_immediately("B", "T30", test_day, time(8, 0), time(10, 0))
-    ok3, slot3 = schedule_client_immediately("C", "T30", test_day, time(8, 0), time(10, 0))
-    # 2 slots fit in 2 hours if step 30 -> actually 4 slots, depending on step; just check no crash
-    if not ok1 or not ok2:
-        errors.append("Scheduling basic failed")
-
-    if errors:
-        st.error('Testy wykryły błędy: ' + '; '.join(errors))
-    else:
-        st.success('Podstawowe testy przeszły pomyślnie ✅')
-
-if os.environ.get("RUN_SCHEDULE_TESTS"):
-    _run_basic_tests()
