@@ -641,7 +641,7 @@ else:
     """, unsafe_allow_html=True)
     
     for i, s in enumerate(available_slots):
-        col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
+        col1, col2, col4 = st.columns([2, 2, 1])
 
         # Wyświetl godzinę slotu
         # col1.write(f"🕐 {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
