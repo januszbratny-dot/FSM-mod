@@ -419,6 +419,14 @@ def schedule_client_immediately(client_name: str, slot_type_name: str, day: date
     slot_with_meta["brygada"] = brygada
     return True, slot_with_meta
 
+# ---------------------- PREDEFINED SLOTS & UTIL ----------------------
+PREFERRED_SLOTS = {
+    "8:00-11:00": (time(8, 0), time(11, 0)),
+    "11:00-14:00": (time(11, 0), time(14, 0)),
+    "14:00-17:00": (time(14, 0), time(17, 0)),
+    "17:00-20:00": (time(17, 0), time(20, 0)),
+}
+
 
 def get_week_days(reference_day: date) -> List[date]:
     monday = reference_day - timedelta(days=reference_day.weekday())
