@@ -1132,9 +1132,14 @@ else:
 
 #--------------
 
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+from datetime import datetime, time
+
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu (osobno dla każdej brygady)")
 
-for b in st.session_state.brygady:
+for idx, b in enumerate(st.session_state.brygady):
     d_str = booking_day.strftime("%Y-%m-%d")
     slots = st.session_state.schedules.get(b, {}).get(d_str, [])
     if not slots:
@@ -1153,7 +1158,7 @@ for b in st.session_state.brygady:
             "Koniec": s["end"],
         })
 
-        # Przedział przyjazdu
+        # Przedział przyjazdu (50% długości slotu)
         if s.get("arrival_window_start") and s.get("arrival_window_end"):
             dual_slots_day.append({
                 "Y": y_label,
@@ -1167,6 +1172,7 @@ for b in st.session_state.brygady:
         st.info(f"Brak slotów do wyświetlenia dla brygady {b}.")
         continue
 
+    # Tworzenie wykresu Gantta
     fig_day = px.timeline(
         df_dual_day,
         x_start="Start",
@@ -1180,6 +1186,7 @@ for b in st.session_state.brygady:
         hover_data=["Typ"]
     )
 
+    # Ustawienie przezroczystości słupków
     for trace in fig_day.data:
         if trace.name == "Przedział przyjazdu":
             trace.opacity = 0.3
@@ -1201,6 +1208,7 @@ for b in st.session_state.brygady:
         fig_day.add_vline(x=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
         fig_day.add_vline(x=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
 
+    # Wyświetlenie wykresu z unikalnym key
     st.markdown(f"### Brygada: {b}")
-    st.plotly_chart(fig_day, use_container_width=True)
+    st.plotly_chart(fig_day, use_container_width=True, key=f"gantt_{idx}_{b}")
 
