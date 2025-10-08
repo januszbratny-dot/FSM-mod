@@ -658,6 +658,7 @@ else:
         col1, col2, col4 = st.columns([2, 2, 1])
 
         # ---------------------- Przedział przyjazdu ----------------------
+        # ---------------------- Przedział przyjazdu ----------------------
         if s.get("arrival_window_start") and s.get("arrival_window_end"):
             arr_start_dt = s["arrival_window_start"]
             arr_end_dt = s["arrival_window_end"]
@@ -677,15 +678,20 @@ else:
                 wh_end_dt += timedelta(days=1)
         
             start_dt = s["start"]
+            end_dt = s.get("end", start_dt + timedelta(minutes=60))  # zakładamy 1h, jeśli brak 'end'
+            slot_mid = start_dt + (end_dt - start_dt) / 2
         
-            # ✅ Przedział przyjazdu to dokładnie suma buforów (z ograniczeniem do godzin pracy)
-            raw_start = start_dt - timedelta(minutes=czas_przed)
-            raw_end = start_dt + timedelta(minutes=czas_po)
+            # ✅ przedział = środek ± bufor
+            raw_start = slot_mid - timedelta(minutes=czas_przed)
+            raw_end = slot_mid + timedelta(minutes=czas_po)
+        
+            # ograniczenie do godzin pracy
             arr_start_dt = max(raw_start, wh_start_dt)
             arr_end_dt = min(raw_end, wh_end_dt)
         
         arr_str = f"{arr_start_dt.strftime('%H:%M')} – {arr_end_dt.strftime('%H:%M')}"
         col1.write(f"🚗 Przedział przyjazdu: {arr_str}")
+
 
 
         # Wyświetl dostępne brygady
