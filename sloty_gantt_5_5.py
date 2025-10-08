@@ -177,8 +177,6 @@ if "slot_types" not in st.session_state:
             "Brygada 1": (DEFAULT_WORK_START, DEFAULT_WORK_END),  # 08:00–16:00
             "Brygada 2": (time(12, 0), time(20, 0))             # 12:00–20:00
         }
-        
-        st.session_state.working_hours = {}
         st.session_state.schedules = {}
         st.session_state.clients_added = []
         st.session_state.balance_horizon = "week"
