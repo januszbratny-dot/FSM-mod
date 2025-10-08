@@ -1019,52 +1019,56 @@ if not df_arrival.empty:
     st.plotly_chart(fig_arr, use_container_width=True)
 else:
     st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
-# ---------------------- PODWÓJNY GANTT Z WYRAŹNYMI PASKAMI ----------------------
-dual_slots = []
+# ---------------------- PODWÓJNY GANTT W JEDNYM WIERSZU ----------------------
+dual_slots_same_row = []
 for b in st.session_state.brygady:
     for d in week_days:
         d_str = d.strftime("%Y-%m-%d")
         slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-        for idx, s in enumerate(slots):
-            # unikalna etykieta Y: Brygada – Klient – Dzień – index
-            y_label = f"{b} – {s['client']} – {d_str} – {idx+1}"
-            
+        for s in slots:
+            # unikalna etykieta Y: Brygada – Klient – Dzień
+            y_label = f"{b} – {s['client']} – {d_str}"
+
             # Slot pracy
-            dual_slots.append({
+            dual_slots_same_row.append({
                 "Y": y_label,
                 "Typ": "Slot pracy",
                 "Start": s["start"],
                 "Koniec": s["end"]
             })
-            
-            # Przedział przyjazdu
+
+            # Przedział przyjazdu (jeśli istnieje)
             if s.get("arrival_window_start") and s.get("arrival_window_end"):
-                dual_slots.append({
+                dual_slots_same_row.append({
                     "Y": y_label,
                     "Typ": "Przedział przyjazdu",
                     "Start": s["arrival_window_start"],
                     "Koniec": s["arrival_window_end"]
                 })
 
-df_dual = pd.DataFrame(dual_slots)
+df_dual_same_row = pd.DataFrame(dual_slots_same_row)
 
-if not df_dual.empty:
-    st.subheader("📊 Podwójny Gantt – Slot pracy i przedział przyjazdu (widoczne paski)")
+if not df_dual_same_row.empty:
+    st.subheader("📊 Gantt – Slot pracy i przedział przyjazdu w tym samym wierszu")
 
-    fig_dual = px.timeline(
-        df_dual,
+    fig_same_row = px.timeline(
+        df_dual_same_row,
         x_start="Start",
         x_end="Koniec",
         y="Y",
         color="Typ",
+        color_discrete_map={
+            "Slot pracy": "#1f77b4",        # niebieski
+            "Przedział przyjazdu": "#ff7f0e" # pomarańczowy
+        },
         hover_data=["Typ"]
     )
-    fig_dual.update_yaxes(autorange="reversed")
+    fig_same_row.update_yaxes(autorange="reversed")  # aby od góry w dół
 
     # Dodanie preferowanych przedziałów w tle
     for d in week_days:
         for label, (s, e) in PREFERRED_SLOTS.items():
-            fig_dual.add_vrect(
+            fig_same_row.add_vrect(
                 x0=datetime.combine(d, s),
                 x1=datetime.combine(d, e),
                 fillcolor="rgba(200,200,200,0.15)",
@@ -1072,13 +1076,12 @@ if not df_dual.empty:
                 layer="below",
                 line_width=0
             )
-            fig_dual.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
-            fig_dual.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+            fig_same_row.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
+            fig_same_row.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
 
-    st.plotly_chart(fig_dual, use_container_width=True)
+    st.plotly_chart(fig_same_row, use_container_width=True)
 else:
-    st.info("Brak danych do wyświetlenia podwójnego Gantta.")
-
+    st.info("Brak danych do wyświetlenia Gantta z przedziałami przyjazdu.")
 
 
 # ---------------------- PODSUMOWANIE ----------------------
