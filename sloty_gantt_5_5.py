@@ -916,56 +916,6 @@ if not df.empty:
     st.plotly_chart(fig, use_container_width=True)
 
 
-
-# ---------------------- GANTT 1-DNIOWY: Przedziały przyjazdu (osobny wiersz na slot) ----------------------
-arrival_slots_day = []
-for b in st.session_state.brygady:
-    d_str = booking_day.strftime("%Y-%m-%d")
-    slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-    for s in slots:
-        if s.get("arrival_window_start") and s.get("arrival_window_end"):
-            arrival_slots_day.append({
-                "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
-                "Brygada": b,
-                "Dzień": d_str,
-                "Klient": s["client"],
-                "Start": s["arrival_window_start"],
-                "Koniec": s["arrival_window_end"],
-                "Slot pracy": f"{s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')}",
-            })
-
-df_arrival_day = pd.DataFrame(arrival_slots_day)
-
-if not df_arrival_day.empty:
-    st.subheader(f"📊 Gantt przedziałów przyjazdu – {booking_day.strftime('%A, %d %B %Y')}")
-
-    fig_arr_day = px.timeline(
-        df_arrival_day,
-        x_start="Start",
-        x_end="Koniec",
-        y="SlotID",  # każdy slot w osobnym wierszu
-        color="Klient",
-        hover_data=["Brygada", "Slot pracy"]
-    )
-    fig_arr_day.update_yaxes(autorange="reversed")
-
-    # Dodanie wizualizacji preferowanych przedziałów w tle
-    for label, (s, e) in PREFERRED_SLOTS.items():
-        fig_arr_day.add_vrect(
-            x0=datetime.combine(booking_day, s),
-            x1=datetime.combine(booking_day, e),
-            fillcolor="rgba(200,200,200,0.15)",
-            opacity=0.2,
-            layer="below",
-            line_width=0
-        )
-        fig_arr_day.add_vline(x=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
-        fig_arr_day.add_vline(x=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
-
-    st.plotly_chart(fig_arr_day, use_container_width=True)
-else:
-    st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu w wybranym dniu.")
-
 # ---------------------- GANTT 1-DNIOWY: Praca + transparentny przedział przyjazdu ----------------------
 dual_slots_day = []
 for b in st.session_state.brygady:
