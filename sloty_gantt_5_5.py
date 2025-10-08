@@ -1154,30 +1154,38 @@ for idx, b in enumerate(st.session_state.brygady):
     for s in slots:
         y_center = y_pos
 
+        start = s["start"]
+        end = s["end"]
+        duration_hours = (end - start).total_seconds()/3600
+
         # Slot pracy – pełna wysokość
         fig.add_trace(go.Bar(
-            x=[(s["end"] - s["start"]).total_seconds()/3600],  # długość w godzinach
+            x=[duration_hours],
             y=[y_center],
-            base=[s["start"]],
+            base=[start],
             orientation='h',
             width=bar_height,
             name="Slot pracy",
             marker_color="#1f77b4",
-            hovertemplate=f"{s['client']}<br>Praca: %{base} - %{x}"
+            hovertemplate=f"{s['client']}<br>Praca: {start.strftime('%H:%M')} - {end.strftime('%H:%M')}"
         ))
 
         # Przedział przyjazdu – krótszy
         if s.get("arrival_window_start") and s.get("arrival_window_end"):
+            a_start = s["arrival_window_start"]
+            a_end = s["arrival_window_end"]
+            a_duration = (a_end - a_start).total_seconds()/3600
+
             fig.add_trace(go.Bar(
-                x=[(s["arrival_window_end"] - s["arrival_window_start"]).total_seconds()/3600],
+                x=[a_duration],
                 y=[y_center],
-                base=[s["arrival_window_start"]],
+                base=[a_start],
                 orientation='h',
                 width=bar_height * 0.5,  # 50% wysokości
                 name="Przedział przyjazdu",
                 marker_color="#ff7f0e",
                 opacity=0.5,
-                hovertemplate=f"{s['client']}<br>Przyjazd: %{base} - %{x}"
+                hovertemplate=f"{s['client']}<br>Przyjazd: {a_start.strftime('%H:%M')} - {a_end.strftime('%H:%M')}"
             ))
 
         y_pos += 1 + y_gap
@@ -1195,5 +1203,6 @@ for idx, b in enumerate(st.session_state.brygady):
 
     st.markdown(f"### Brygada: {b}")
     st.plotly_chart(fig, use_container_width=True, key=f"gantt_{idx}_{b}")
+
 
 
