@@ -702,7 +702,7 @@ else:
 st.markdown("### ⏳ Przekazanie zlecenia do Dyspozytora")
 if st.button("Zleć bez terminu", key="unscheduled_order"):
     st.session_state.unscheduled_orders.append({
-        "client": st.session_state.client_name,
+        "client": client_name,
         "slot_type": slot_type_name,
         "created": datetime.now().isoformat()
     })
@@ -712,7 +712,7 @@ if st.button("Zleć bez terminu", key="unscheduled_order"):
     #st.session_state.client_name = f"Klient {st.session_state.client_counter}"
 
     save_state_to_json()
-    st.success(f"✅ Zlecenie dla {st.session_state.client_name} dodane do listy bez terminu.")
+    st.success(f"✅ Zlecenie dla {client_name} dodane do listy bez terminu.")
     st.rerun()
 
 
