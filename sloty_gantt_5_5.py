@@ -1019,30 +1019,28 @@ if not df_arrival.empty:
     st.plotly_chart(fig_arr, use_container_width=True)
 else:
     st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
-# ---------------------- PODWÓJNY GANTT: Praca + Przedział przyjazdu ----------------------
+# ---------------------- PODWÓJNY GANTT Z WYRAŹNYMI PASKAMI ----------------------
 dual_slots = []
 for b in st.session_state.brygady:
     for d in week_days:
         d_str = d.strftime("%Y-%m-%d")
         slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-        for s in slots:
+        for idx, s in enumerate(slots):
+            # unikalna etykieta Y: Brygada – Klient – Dzień – index
+            y_label = f"{b} – {s['client']} – {d_str} – {idx+1}"
+            
             # Slot pracy
             dual_slots.append({
-                "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
-                "Brygada": b,
-                "Dzień": d_str,
-                "Klient": s["client"],
+                "Y": y_label,
                 "Typ": "Slot pracy",
                 "Start": s["start"],
                 "Koniec": s["end"]
             })
+            
             # Przedział przyjazdu
             if s.get("arrival_window_start") and s.get("arrival_window_end"):
                 dual_slots.append({
-                    "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
-                    "Brygada": b,
-                    "Dzień": d_str,
-                    "Klient": s["client"],
+                    "Y": y_label,
                     "Typ": "Przedział przyjazdu",
                     "Start": s["arrival_window_start"],
                     "Koniec": s["arrival_window_end"]
@@ -1051,20 +1049,19 @@ for b in st.session_state.brygady:
 df_dual = pd.DataFrame(dual_slots)
 
 if not df_dual.empty:
-    st.subheader("📊 Podwójny Gantt – Slot pracy i przedział przyjazdu")
+    st.subheader("📊 Podwójny Gantt – Slot pracy i przedział przyjazdu (widoczne paski)")
 
-    # Oś Y: unikalny SlotID (każdy slot w osobnym wierszu)
     fig_dual = px.timeline(
         df_dual,
         x_start="Start",
         x_end="Koniec",
-        y="SlotID",
-        color="Typ",  # rozróżnienie pasków pracy/przyjazdu
-        hover_data=["Brygada", "Klient", "Typ"]
+        y="Y",
+        color="Typ",
+        hover_data=["Typ"]
     )
     fig_dual.update_yaxes(autorange="reversed")
 
-    # Dodanie wizualizacji preferowanych przedziałów
+    # Dodanie preferowanych przedziałów w tle
     for d in week_days:
         for label, (s, e) in PREFERRED_SLOTS.items():
             fig_dual.add_vrect(
