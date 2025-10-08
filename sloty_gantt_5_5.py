@@ -670,10 +670,10 @@ else:
         col2.write(f"👷 Brygady: {', '.join(s['brygady'])}")
 
         # Oblicz przedział przyjazdu na podstawie ustawień
-        czas_przed = int(st.session_state.get('czas_rezerwowy_przed', 90))
-        czas_po = int(st.session_state.get('czas_rezerwowy_po', 90))
-        arrival_start, arrival_end = oblicz_przedzial_przyjazdu(s['start'], czas_przed, czas_po)
-        col3.write(f"🚗 Przedział przyjazdu: {arrival_start.strftime('%H:%M')} – {arrival_end.strftime('%H:%M')}")
+        #czas_przed = int(st.session_state.get('czas_rezerwowy_przed', 90))
+        #czas_po = int(st.session_state.get('czas_rezerwowy_po', 90))
+        #arrival_start, arrival_end = oblicz_przedzial_przyjazdu(s['start'], czas_przed, czas_po)
+        #col3.write(f"🚗 Przedział przyjazdu: {arrival_start.strftime('%H:%M')} – {arrival_end.strftime('%H:%M')}")
 
         # Przycisk rezerwacji slotu
         if col4.button("Zarezerwuj w tym slocie", key=f"book_{i}"):
