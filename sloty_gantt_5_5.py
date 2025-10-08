@@ -832,6 +832,17 @@ else:
 
 # management: delete individual slots
 st.subheader("🧰 Zarządzaj slotami")
+
+# Nagłówek kolumn
+header_cols = st.columns([1, 1, 2, 1, 1, 1])
+header_cols[0].write("Brygada")
+header_cols[1].write("Dzień")
+header_cols[2].write("Klient + Typ")
+header_cols[3].write("Start – Koniec")
+header_cols[4].write("Przedział przyjazdu")
+header_cols[5].write("Akcje")
+
+# Wiersze z danymi
 if not df.empty:
     for idx, row in df.iterrows():
         cols = st.columns([1, 1, 2, 1, 1, 1])
