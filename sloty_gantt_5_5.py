@@ -986,25 +986,24 @@ else:
     st.info("Brak slotów do wyświetlenia dla wybranego dnia.")
 
 # ---------------------- GANTT TRANSPOZYCYJNY: oś Y = czas, oś X = sloty ----------------------
-import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, time
 
-# ---------- Parametry ----------
-# booking_day – dzień, który chcemy wyświetlić, np. wybrany przez przyciski w sekcji "Rezerwacja terminu"
-# week_days = [booking_day] w tym przypadku tylko jeden dzień
-# PREFERRED_SLOTS – słownik preferowanych przedziałów, np. {"Poranny": (time(8,0), time(12,0)), "Popołudniowy": (time(12,0), time(16,0))}
+# --- Parametry ---
+# Dzień do wyświetlenia (przykład: pierwszy dzień z week_days)
+selected_day = week_days[0]
+selected_day_str = selected_day.strftime("%Y-%m-%d")
 
-# ---------------------- Przygotowanie df do transpozycji ----------------------
+# Przygotowanie listy slotów dla wybranego dnia
 transposed_slots = []
 for b in st.session_state.brygady:
-    d_str = booking_day.strftime("%Y-%m-%d")  # tylko wybrany dzień
-    slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-    for s in slots:
-        slot_label = f"{b} – {s['client']} – {d_str}"
+    slots = st.session_state.schedules.get(b, {}).get(selected_day_str, [])
+    for idx, s in enumerate(slots):
+        slot_label = f"{b} – {s['client']}"
+        slot_id = f"{b}_{s['client']}_{s['start'].isoformat()}"
 
-        # Slot pracy – pełny kolor
+        # Slot pracy
         transposed_slots.append({
             "Slot": slot_label,
             "Typ": "Slot pracy",
@@ -1012,7 +1011,7 @@ for b in st.session_state.brygady:
             "End": s["end"],
         })
 
-        # Przedział przyjazdu – półprzezroczysty
+        # Przedział przyjazdu (jeśli jest)
         if s.get("arrival_window_start") and s.get("arrival_window_end"):
             transposed_slots.append({
                 "Slot": slot_label,
@@ -1023,49 +1022,50 @@ for b in st.session_state.brygady:
 
 df_transposed = pd.DataFrame(transposed_slots)
 
-# ---------------------- Rysowanie transponowanego Gantta ----------------------
 if not df_transposed.empty:
-    st.subheader(f"📊 Gantt – transpozycja dla dnia {booking_day.strftime('%Y-%m-%d')}")
+    st.subheader(f"📊 Gantt (transpozycja) – Praca i przedział przyjazdu dla dnia {selected_day_str}")
 
+    # Tworzymy wykres z transpozycją: X = sloty, Y = czas
     fig_transposed = px.timeline(
         df_transposed,
-        x_start="Slot",
-        x_end="Slot",  # używamy slotu jako szerokości – rysujemy linie czasowe na osi Y
-        y="Start",     # oś Y to czas
+        x_start="Start",
+        x_end="End",
+        y="Slot",
         color="Typ",
         color_discrete_map={
             "Slot pracy": "#1f77b4",        # niebieski
             "Przedział przyjazdu": "#ff7f0e" # pomarańczowy
         },
-        hover_data=["Slot", "Typ", "End"]
+        hover_data=["Typ", "Start", "End"]
     )
 
-    # Ustawienie przezroczystości
+    # Przezroczystość dla przedziału przyjazdu
     for trace in fig_transposed.data:
         if trace.name == "Przedział przyjazdu":
             trace.opacity = 0.3
         else:
             trace.opacity = 1.0
 
-    fig_transposed.update_yaxes(title="Czas", autorange="reversed")  # od góry w dół
-    fig_transposed.update_xaxes(title="Slot")
+    # Odwrócenie osi Y, aby sloty były od góry w dół
+    fig_transposed.update_yaxes(autorange="reversed")
 
     # Preferowane przedziały w tle
     for label, (s, e) in PREFERRED_SLOTS.items():
         fig_transposed.add_hrect(
-            y0=datetime.combine(booking_day, s),
-            y1=datetime.combine(booking_day, e),
+            y0=slot_label,  # nieco przybliżone – rysuje w tle dla slotu
+            y1=slot_label,
+            x0=datetime.combine(selected_day, s),
+            x1=datetime.combine(selected_day, e),
             fillcolor="rgba(200,200,200,0.15)",
-            layer="below",
-            line_width=0
+            line_width=0,
+            layer="below"
         )
-        fig_transposed.add_hline(y=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
-        fig_transposed.add_hline(y=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
+        fig_transposed.add_vline(x=datetime.combine(selected_day, s), line_width=1, line_dash="dot")
+        fig_transposed.add_vline(x=datetime.combine(selected_day, e), line_width=1, line_dash="dot")
 
     st.plotly_chart(fig_transposed, use_container_width=True)
-
 else:
-    st.info(f"Brak danych do wyświetlenia transponowanego Gantta dla dnia {booking_day.strftime('%Y-%m-%d')}.")
+    st.info("Brak danych do wyświetlenia transponowanego Gantta dla wybranego dnia.")
 
 
 # ---------------------- PODSUMOWANIE ----------------------
