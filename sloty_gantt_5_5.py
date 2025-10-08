@@ -834,7 +834,7 @@ else:
 st.subheader("🧰 Zarządzaj slotami")
 if not df.empty:
     for idx, row in df.iterrows():
-        cols = st.columns([1, 2, 1.2, 2, 1, 1])
+        cols = st.columns([1, 1, 2, 1, 1, 1])
         cols[0].write(row["Brygada"])  # nowa kolumna pokazująca brygadę
         cols[1].write(row["Dzień"])
         cols[2].write(f"**{row['Klient']}** — {row['Typ']}")
