@@ -835,12 +835,10 @@ st.subheader("🧰 Zarządzaj slotami")
 
 # Nagłówek kolumn
 header_cols = st.columns([1, 1, 2, 1, 1, 1])
-header_cols[0].write("Brygada")
-header_cols[1].write("Dzień")
-header_cols[2].write("Klient + Typ")
-header_cols[3].write("Start – Koniec")
-header_cols[4].write("Przedział przyjazdu")
-header_cols[5].write("Akcje")
+headers = ["Brygada", "Dzień", "Klient + Typ", "Start – Koniec", "Przedział przyjazdu", "Akcje"]
+for col, title in zip(header_cols, headers):
+    col.markdown(f"<div style='background-color:#f0f0f0; font-weight:bold; padding:4px; border-radius:4px;'>{title}</div>", unsafe_allow_html=True)
+
 
 # Wiersze z danymi
 if not df.empty:
