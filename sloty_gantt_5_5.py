@@ -901,19 +901,7 @@ if not df.empty:
 
 
 
-# ---------------------- GANTT ----------------------
-if not df.empty:
-    st.subheader("📊 Wykres Gantta - tydzień")
-    fig = px.timeline(df, x_start="Start", x_end="Koniec", y="Brygada", color="Klient", hover_data=["Typ", "Przedział przyjazdu"])
-    fig.update_yaxes(autorange="reversed")
 
-    for d in week_days:
-        for label, (s, e) in PREFERRED_SLOTS.items():
-            fig.add_vrect(x0=datetime.combine(d, s), x1=datetime.combine(d, e), fillcolor="rgba(200,200,200,0.15)", opacity=0.2, layer="below", line_width=0)
-            fig.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
-            fig.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
-
-    st.plotly_chart(fig, use_container_width=True)
 
 # ---------------------- GANTT 2 ----------------------
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu (osobno dla każdej brygady)")
@@ -989,7 +977,19 @@ for b in st.session_state.brygady:
     st.plotly_chart(fig_day, use_container_width=True)
 
 
+# ---------------------- GANTT ----------------------
+if not df.empty:
+    st.subheader("📊 Wykres Gantta - tydzień")
+    fig = px.timeline(df, x_start="Start", x_end="Koniec", y="Brygada", color="Klient", hover_data=["Typ", "Przedział przyjazdu"])
+    fig.update_yaxes(autorange="reversed")
 
+    for d in week_days:
+        for label, (s, e) in PREFERRED_SLOTS.items():
+            fig.add_vrect(x0=datetime.combine(d, s), x1=datetime.combine(d, e), fillcolor="rgba(200,200,200,0.15)", opacity=0.2, layer="below", line_width=0)
+            fig.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
+            fig.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+
+    st.plotly_chart(fig, use_container_width=True)
 
 
 # ---------------------- PODSUMOWANIE ----------------------
