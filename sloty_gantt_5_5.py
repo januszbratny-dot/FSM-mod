@@ -850,32 +850,6 @@ if df.empty:
 else:
     st.dataframe(df.drop(columns=["_id"]))
 
-
-# ---------------------- ZLECENIA BEZ TERMINU ----------------------
-st.subheader("⏳ Zlecenia bez terminu - Dyspozytor")
-
-# Inicjalizacja listy, jeśli nie istnieje
-if "unscheduled_orders" not in st.session_state:
-    st.session_state.unscheduled_orders = []
-
-
-if st.session_state.unscheduled_orders:
-    # iterujemy po kopii listy, aby być bezpiecznym przy mutacjach
-    for idx, o in enumerate(list(st.session_state.unscheduled_orders)):
-        cols = st.columns([3, 2, 1])
-        cols[0].write(f"{o['client']} — {o['slot_type']}")
-        cols[1].write(f"Dodano: {datetime.fromisoformat(o['created']).strftime('%d-%m-%Y %H:%M')}")
-        # klucz guzika uczyniony bardziej unikalnym (idx + timestamp)
-        btn_key = f"unsched_del_{idx}_{o.get('created')}"
-        if cols[2].button("Usuń", key=btn_key):
-            # usuwamy po unikalnym 'created' (stabilniejsze niż index)
-            st.session_state.unscheduled_orders = [
-                x for x in st.session_state.unscheduled_orders if x.get("created") != o.get("created")
-            ]
-            save_state_to_json()          # <- KLUCZ: zapisz zmiany!
-            st.success(f"❌ Zlecenie {o['client']} usunięte.")
-            st.rerun()
-
 # ---------------------- GANTT 2 ----------------------
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu (osobno dla każdej brygady)")
 
@@ -948,6 +922,33 @@ for b in st.session_state.brygady:
 
     st.markdown(f"### Brygada: {b}")
     st.plotly_chart(fig_day, use_container_width=True)
+
+# ---------------------- ZLECENIA BEZ TERMINU ----------------------
+st.subheader("⏳ Zlecenia bez terminu - Dyspozytor")
+
+# Inicjalizacja listy, jeśli nie istnieje
+if "unscheduled_orders" not in st.session_state:
+    st.session_state.unscheduled_orders = []
+
+
+if st.session_state.unscheduled_orders:
+    # iterujemy po kopii listy, aby być bezpiecznym przy mutacjach
+    for idx, o in enumerate(list(st.session_state.unscheduled_orders)):
+        cols = st.columns([3, 2, 1])
+        cols[0].write(f"{o['client']} — {o['slot_type']}")
+        cols[1].write(f"Dodano: {datetime.fromisoformat(o['created']).strftime('%d-%m-%Y %H:%M')}")
+        # klucz guzika uczyniony bardziej unikalnym (idx + timestamp)
+        btn_key = f"unsched_del_{idx}_{o.get('created')}"
+        if cols[2].button("Usuń", key=btn_key):
+            # usuwamy po unikalnym 'created' (stabilniejsze niż index)
+            st.session_state.unscheduled_orders = [
+                x for x in st.session_state.unscheduled_orders if x.get("created") != o.get("created")
+            ]
+            save_state_to_json()          # <- KLUCZ: zapisz zmiany!
+            st.success(f"❌ Zlecenie {o['client']} usunięte.")
+            st.rerun()
+
+
 
 #----------------------------------------------------
 # management: delete individual slots
