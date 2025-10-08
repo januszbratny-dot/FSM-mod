@@ -690,6 +690,23 @@ else:
             st.success(f"✅ Zarezerwowano slot {s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')} w brygadzie {brygada}.")
             st.rerun()
 
+# --- Przycisk „Zleć bez terminu” ---
+st.markdown("### ⏳ Przekazanie zlecenia do Dyspozytora")
+if st.button("Zleć bez terminu", key="unscheduled_order"):
+    st.session_state.unscheduled_orders.append({
+        "client": st.session_state.client_name,
+        "slot_type": slot_type_name,
+        "created": datetime.now().isoformat()
+    })
+
+    # automatyczne przypisanie nowego klienta tylko do client_name
+    st.session_state.client_counter += 1
+    #st.session_state.client_name = f"Klient {st.session_state.client_counter}"
+
+    save_state_to_json()
+    st.success(f"✅ Zlecenie dla {st.session_state.client_name} dodane do listy bez terminu.")
+    st.rerun()
+
 
 # ---------------------- AUTO-FILL FULL DAY (BEZPIECZNY) ----------------------
 st.subheader("⚡ Automatyczne dociążenie wszystkich brygad")
