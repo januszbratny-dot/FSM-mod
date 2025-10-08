@@ -658,24 +658,8 @@ else:
         col1, col2, col4 = st.columns([2, 2, 1])
 
         # Przedział przyjazdu
-        if s.get("arrival_window_start") and s.get("arrival_window_end"):
-            arr_start_dt = s["arrival_window_start"]
-            arr_end_dt = s["arrival_window_end"]
-        else:
-            brygada_for_display = s["brygady"][0] if s.get("brygady") else (st.session_state.brygady[0] if st.session_state.brygady else None)
-            czas_przed = int(st.session_state.get("czas_rezerwowy_przed", 90))
-            czas_po = int(st.session_state.get("czas_rezerwowy_po", 90))
-            wh_start, wh_end = st.session_state.working_hours.get(brygada_for_display, (DEFAULT_WORK_START, DEFAULT_WORK_END))
-            wh_start_dt = datetime.combine(booking_day, wh_start)
-            wh_end_dt = datetime.combine(booking_day, wh_end)
-            if wh_end_dt <= wh_start_dt:
-                wh_end_dt += timedelta(days=1)
-            start_dt = s["start"]
-            arr_start_dt = max(start_dt - timedelta(minutes=czas_przed), wh_start_dt)
-            arr_end_dt = min(start_dt + timedelta(minutes=czas_po), wh_end_dt)
-
-        arr_str = f"{arr_start_dt.strftime('%H:%M')} – {arr_end_dt.strftime('%H:%M')}"
-        col1.write(f"🚗 Przedział przyjazdu: {arr_str}")
+        # Wyświetl godzinę slotu (tylko godziny)
+        col1.write(f"🚗 Przedział przyjazdu: {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
 
         # Wyświetl dostępne brygady
         col2.write(f"👷 Brygady: {', '.join(s['brygady'])}")
