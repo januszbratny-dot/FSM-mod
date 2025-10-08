@@ -1134,10 +1134,10 @@ else:
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-from datetime import datetime, time
+import plotly.graph_objects as go
+from datetime import datetime
 
-st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu (osobno dla każdej brygady)")
+st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu")
 
 for idx, b in enumerate(st.session_state.brygady):
     d_str = booking_day.strftime("%Y-%m-%d")
@@ -1146,69 +1146,54 @@ for idx, b in enumerate(st.session_state.brygady):
         st.info(f"Brak slotów dla {b} w wybranym dniu.")
         continue
 
-    dual_slots_day = []
+    fig = go.Figure()
+    y_pos = 0
+    y_gap = 0.3  # odległość między klientami
+    bar_height = 0.2
+
     for s in slots:
-        y_label = f"{s['client']}"
+        y_center = y_pos
 
-        # Slot pracy
-        dual_slots_day.append({
-            "Y": y_label,
-            "Typ": "Slot pracy",
-            "Start": s["start"],
-            "Koniec": s["end"],
-        })
+        # Slot pracy – pełna wysokość
+        fig.add_trace(go.Bar(
+            x=[(s["end"] - s["start"]).total_seconds()/3600],  # długość w godzinach
+            y=[y_center],
+            base=[s["start"]],
+            orientation='h',
+            width=bar_height,
+            name="Slot pracy",
+            marker_color="#1f77b4",
+            hovertemplate=f"{s['client']}<br>Praca: %{base} - %{x}"
+        ))
 
-        # Przedział przyjazdu (50% długości slotu)
+        # Przedział przyjazdu – krótszy
         if s.get("arrival_window_start") and s.get("arrival_window_end"):
-            dual_slots_day.append({
-                "Y": y_label,
-                "Typ": "Przedział przyjazdu",
-                "Start": s["arrival_window_start"],
-                "Koniec": s["arrival_window_end"],
-            })
+            fig.add_trace(go.Bar(
+                x=[(s["arrival_window_end"] - s["arrival_window_start"]).total_seconds()/3600],
+                y=[y_center],
+                base=[s["arrival_window_start"]],
+                orientation='h',
+                width=bar_height * 0.5,  # 50% wysokości
+                name="Przedział przyjazdu",
+                marker_color="#ff7f0e",
+                opacity=0.5,
+                hovertemplate=f"{s['client']}<br>Przyjazd: %{base} - %{x}"
+            ))
 
-    df_dual_day = pd.DataFrame(dual_slots_day)
-    if df_dual_day.empty:
-        st.info(f"Brak slotów do wyświetlenia dla brygady {b}.")
-        continue
+        y_pos += 1 + y_gap
 
-    # Tworzenie wykresu Gantta
-    fig_day = px.timeline(
-        df_dual_day,
-        x_start="Start",
-        x_end="Koniec",
-        y="Y",
-        color="Typ",
-        color_discrete_map={
-            "Slot pracy": "#1f77b4",
-            "Przedział przyjazdu": "#ff7f0e"
-        },
-        hover_data=["Typ"]
+    fig.update_yaxes(
+        tickvals=[i for i in range(len(slots))],
+        ticktext=[s["client"] for s in slots],
+        autorange="reversed"
+    )
+    fig.update_layout(
+        barmode='overlay',
+        showlegend=True,
+        height=300 + len(slots)*40
     )
 
-    # Ustawienie przezroczystości słupków
-    for trace in fig_day.data:
-        if trace.name == "Przedział przyjazdu":
-            trace.opacity = 0.3
-        else:
-            trace.opacity = 1.0
-
-    fig_day.update_yaxes(autorange="reversed")
-
-    # Dodanie preferowanych przedziałów w tle
-    for label, (s, e) in PREFERRED_SLOTS.items():
-        fig_day.add_vrect(
-            x0=datetime.combine(booking_day, s),
-            x1=datetime.combine(booking_day, e),
-            fillcolor="rgba(200,200,200,0.15)",
-            opacity=0.2,
-            layer="below",
-            line_width=0
-        )
-        fig_day.add_vline(x=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
-        fig_day.add_vline(x=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
-
-    # Wyświetlenie wykresu z unikalnym key
     st.markdown(f"### Brygada: {b}")
-    st.plotly_chart(fig_day, use_container_width=True, key=f"gantt_{idx}_{b}")
+    st.plotly_chart(fig, use_container_width=True, key=f"gantt_{idx}_{b}")
+
 
