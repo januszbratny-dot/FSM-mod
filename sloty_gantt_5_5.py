@@ -985,7 +985,7 @@ if not df_dual_day.empty:
 else:
     st.info("Brak slotów do wyświetlenia dla wybranego dnia.")
 
-# ---------------------- GANTT 1-DNIOWY: Praca + Przedział przyjazdu na brygady ----------------------
+# ---------------------- GANTT 1-DNIOWY: Praca + Przedział przyjazdu na brygady -----------------------
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu (osobno dla każdej brygady)")
 
 for b in st.session_state.brygady:
