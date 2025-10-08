@@ -831,38 +831,73 @@ else:
     st.dataframe(df.drop(columns=["_id"]))
 #----------------------------------------------------
 # management: delete individual slots
+import streamlit as st
+import pandas as pd
+
+# Przykładowe dane
+df = pd.DataFrame([
+    {"_id": 1, "Dzień": "2025-10-08", "Klient": "Jan Kowalski", "Typ": "Instalacja",
+     "Start": pd.to_datetime("08:00"), "Koniec": pd.to_datetime("10:00"),
+     "Przedział przyjazdu": "08:00–09:00", "Brygada": "A"},
+    {"_id": 2, "Dzień": "2025-10-08", "Klient": "Anna Nowak", "Typ": "Serwis",
+     "Start": pd.to_datetime("10:00"), "Koniec": pd.to_datetime("12:00"),
+     "Przedział przyjazdu": "10:00–11:00", "Brygada": "B"},
+])
+
 st.subheader("🧰 Zarządzaj slotami")
 
-# Nagłówek kolumn z tłem, pogrubieniem i cienką linią pod spodem
-header_cols = st.columns([1, 2, 1.2, 2, 1, 1])
-headers = ["Dzień", "Klient", "Typ", "Start – Koniec", "Przedział przyjazdu", "Brygada", "Akcje"]
+# --- Filtry ---
+filter_cols = st.columns([1, 2, 1, 1, 1, 2, 1])
+filter_day = filter_cols[0].text_input("Dzień", "")
+filter_client = filter_cols[1].text_input("Klient", "")
+filter_typ = filter_cols[2].text_input("Typ", "")
+filter_start_from = filter_cols[3].text_input("Start od", "")
+filter_end_to = filter_cols[4].text_input("Koniec do", "")
+filter_przedzial = filter_cols[5].text_input("Przedział przyjazdu", "")
+filter_brygada = filter_cols[6].text_input("Brygada", "")
 
+# Filtrujemy dataframe
+df_filtered = df.copy()
+
+if filter_day:
+    df_filtered = df_filtered[df_filtered["Dzień"].str.contains(filter_day)]
+if filter_client:
+    df_filtered = df_filtered[df_filtered["Klient"].str.contains(filter_client, case=False)]
+if filter_typ:
+    df_filtered = df_filtered[df_filtered["Typ"].str.contains(filter_typ, case=False)]
+if filter_start_from:
+    df_filtered = df_filtered[df_filtered["Start"].dt.strftime('%H:%M') >= filter_start_from]
+if filter_end_to:
+    df_filtered = df_filtered[df_filtered["Koniec"].dt.strftime('%H:%M') <= filter_end_to]
+if filter_przedzial:
+    df_filtered = df_filtered[df_filtered["Przedział przyjazdu"].str.contains(filter_przedzial)]
+if filter_brygada:
+    df_filtered = df_filtered[df_filtered["Brygada"].str.contains(filter_brygada, case=False)]
+
+# --- Nagłówek tabeli ---
+header_cols = st.columns([1, 2, 1, 1, 1, 2, 1, 1])
+headers = ["Dzień", "Klient", "Typ", "Start", "Koniec", "Przedział przyjazdu", "Brygada", "Akcje"]
 for col, title in zip(header_cols, headers):
-    col.markdown(f"""
-        <div style="
-            background-color:#f0f0f0; 
-            font-weight:bold; 
-            padding:4px; 
-            border-bottom:1px solid #c0c0c0; 
-            border-radius:4px 4px 0 0;">
-            {title}
-        </div>
-    """, unsafe_allow_html=True)
+    col.markdown(f"<div style='background-color:#f0f0f0; font-weight:bold; padding:4px; border-radius:4px; border-bottom:1px solid #d0d0d0'>{title}</div>", unsafe_allow_html=True)
 
-# Wiersze z danymi
-if not df.empty:
-    for idx, row in df.iterrows():
-        cols = st.columns([1, 2, 1.2, 2, 1, 1])
+# --- Wiersze tabeli ---
+if not df_filtered.empty:
+    for idx, row in df_filtered.iterrows():
+        cols = st.columns([1, 2, 1, 1, 1, 2, 1, 1])
         cols[0].write(row["Dzień"])
         cols[1].write(f"**{row['Klient']}**")
         cols[2].write(row["Typ"])
-        cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
-        cols[4].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
-        cols[5].write(row["Brygada"])
-        if cols[6].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
+        cols[3].write(row["Start"].strftime('%H:%M'))
+        cols[4].write(row["Koniec"].strftime('%H:%M'))
+        cols[5].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
+        cols[6].write(row["Brygada"])
+        if cols[7].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
+            # Funkcja delete_slot musi być wcześniej zdefiniowana
             delete_slot(row["Brygada"], row["Dzień"], row["_id"])
             st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
             st.rerun()
+else:
+    st.info("Brak slotów pasujących do filtrów.")
 
 
 # ---------------------- ZLECENIA BEZ TERMINU ----------------------
