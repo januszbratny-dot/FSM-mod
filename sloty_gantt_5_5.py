@@ -834,12 +834,13 @@ else:
 st.subheader("🧰 Zarządzaj slotami")
 if not df.empty:
     for idx, row in df.iterrows():
-        cols = st.columns([1.2, 2, 1.2, 2, 1])
-        cols[0].write(row["Dzień"])
-        cols[1].write(f"**{row['Klient']}** — {row['Typ']}")
-        cols[2].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
-        cols[3].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
-        if cols[4].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
+        cols = st.columns([1, 2, 1.2, 2, 1, 1])
+        cols[0].write(row["Brygada"])  # nowa kolumna pokazująca brygadę
+        cols[1].write(row["Dzień"])
+        cols[2].write(f"**{row['Klient']}** — {row['Typ']}")
+        cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
+        cols[4].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
+        if cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
             delete_slot(row["Brygada"], row["Dzień"], row["_id"])
             st.rerun()
 
