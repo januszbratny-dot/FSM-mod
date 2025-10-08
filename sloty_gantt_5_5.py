@@ -986,78 +986,52 @@ else:
     st.info("Brak slotów do wyświetlenia dla wybranego dnia.")
 
 # ---------------------- GANTT TRANSPOZYCYJNY: oś Y = czas, oś X = sloty ----------------------
-dual_slots_transposed = []
-slot_labels = []
-
-for b in st.session_state.brygady:
-    d_str = booking_day.strftime("%Y-%m-%d")
-    slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-    for idx, s in enumerate(slots):
-        slot_label = f"{b} – {s['client']} – {d_str}"
-        slot_labels.append(slot_label)
-
-        # Slot pracy – pełny kolor
-        dual_slots_transposed.append({
-            "Slot": slot_label,
-            "Typ": "Slot pracy",
-            "Start": s["start"],
-            "End": s["end"],
-        })
-
-        # Przedział przyjazdu – półprzezroczysty
-        if s.get("arrival_window_start") and s.get("arrival_window_end"):
-            dual_slots_transposed.append({
-                "Slot": slot_label,
-                "Typ": "Przedział przyjazdu",
-                "Start": s["arrival_window_start"],
-                "End": s["arrival_window_end"],
-            })
-
-df_transposed = pd.DataFrame(dual_slots_transposed)
+import plotly.graph_objects as go
 
 if not df_transposed.empty:
     st.subheader(f"📊 Gantt transpozycja – Praca i przedział przyjazdu – {booking_day.strftime('%A, %d %B %Y')}")
 
-    fig_transposed = px.timeline(
-        df_transposed,
-        x_start="Slot",
-        x_end="Slot",  # nie używamy do długości, zobaczymy w update
-        y_start="Start",
-        y_end="End",
-        color="Typ",
-        color_discrete_map={
-            "Slot pracy": "#1f77b4",
-            "Przedział przyjazdu": "#ff7f0e"
-        },
-        hover_data=["Typ"]
-    )
+    fig = go.Figure()
 
-    # Przezroczystość dla przedziału przyjazdu
-    for trace in fig_transposed.data:
-        if trace.name == "Przedział przyjazdu":
-            trace.opacity = 0.3
-        else:
-            trace.opacity = 1.0
+    colors = {
+        "Slot pracy": "#1f77b4",
+        "Przedział przyjazdu": "#ff7f0e"
+    }
+    opacity_map = {
+        "Slot pracy": 1.0,
+        "Przedział przyjazdu": 0.3
+    }
 
-    fig_transposed.update_xaxes(tickangle=45)  # dla czytelności nazw slotów
-    fig_transposed.update_yaxes(autorange="reversed")  # czas od góry w dół
+    for _, row in df_transposed.iterrows():
+        fig.add_trace(go.Bar(
+            x=[row["Slot"]],
+            y=[(row["End"] - row["Start"]).total_seconds()/3600],  # wysokość = czas w godzinach
+            base=row["Start"].hour + row["Start"].minute/60,
+            name=row["Typ"],
+            marker_color=colors[row["Typ"]],
+            opacity=opacity_map[row["Typ"]],
+            hovertemplate=f"{row['Slot']}<br>{row['Typ']}<br>{row['Start'].strftime('%H:%M')}–{row['End'].strftime('%H:%M')}"
+        ))
 
-    # Dodanie preferowanych przedziałów w tle (poziomo)
+    fig.update_yaxes(title="Czas dnia (godziny)", autorange="reversed")
+    fig.update_xaxes(title="Slot", tickangle=45)
+    fig.update_layout(barmode='overlay', showlegend=True, height=600)
+
+    # Preferowane przedziały w tle
     for label, (s, e) in PREFERRED_SLOTS.items():
-        fig_transposed.add_hrect(
-            y0=datetime.combine(booking_day, s),
-            y1=datetime.combine(booking_day, e),
+        fig.add_hrect(
+            y0=s.hour + s.minute/60,
+            y1=e.hour + e.minute/60,
             fillcolor="rgba(200,200,200,0.15)",
             opacity=0.2,
             layer="below",
             line_width=0
         )
-        fig_transposed.add_hline(y=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
-        fig_transposed.add_hline(y=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
 
-    st.plotly_chart(fig_transposed, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True)
 else:
     st.info("Brak danych do wyświetlenia transpozycjonowanego Gantta w wybranym dniu.")
+
 
 
 # ---------------------- PODSUMOWANIE ----------------------
