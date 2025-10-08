@@ -655,9 +655,9 @@ else:
     """, unsafe_allow_html=True)
     
     for i, s in enumerate(available_slots):
-        col1, col2, col4 = st.columns([2, 2, 1])
+        col0, col1, col2, col4 = st.columns([2, 2, 2, 1])
 
-        #col1.write(f"🚗 Przedział przyjazdu: {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
+        col0.write(f"🚗 Przedział przyjazdu: {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
 
         # pokaż przedział przyjazdu tak jak w tabeli (najpierw sprawdź, czy pole istnieje; jeśli nie — oblicz)
         if s.get("arrival_window_start") and s.get("arrival_window_end"):
