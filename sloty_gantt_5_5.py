@@ -831,62 +831,45 @@ else:
     st.dataframe(df.drop(columns=["_id"]))
 #----------------------------------------------------
 # management: delete individual slots
-st.subheader("🧰 Zarządzaj slotami")
+st.subheader("📋 Tabela harmonogramu")
 
-# --- Definicja proporcji kolumn (dla filtrów, nagłówków i danych) ---
-col_widths = [1, 1.5, 1.2, 1.5, 1.2, 1]  # proporcje odpowiadające kolumnom tabeli
+if df.empty:
+    st.info("Brak zaplanowanych slotów w tym tygodniu.")
+else:
+    # --- Filtry ---
+    col_widths = [1, 2, 1.5, 1.5, 2]  # proporcje kolumn: Dzień, Klient, Typ, Start, Koniec
+    filter_cols = st.columns(col_widths)
 
-# --- Filtry ---
-filter_cols = st.columns(col_widths)
+    # Filtry indywidualne
+    filter_day = filter_cols[0].selectbox("Dzień", options=["Wszystkie"] + sorted(df["Dzień"].unique()), index=0)
+    filter_client = filter_cols[1].text_input("Klient", value="")
+    filter_slot_type = filter_cols[2].selectbox("Typ slotu", options=["Wszystkie"] + sorted(df["Typ"].unique()), index=0)
+    filter_start_from = filter_cols[3].time_input("Start od", value=time(0, 0))
+    filter_start_to   = filter_cols[3].time_input("Start do", value=time(23, 59), key="start_to")
+    filter_end_from   = filter_cols[4].time_input("Koniec od", value=time(0, 0))
+    filter_end_to     = filter_cols[4].time_input("Koniec do", value=time(23, 59), key="end_to")
 
-filter_day = filter_cols[0].selectbox(
-    "Dzień", options=["Wszystkie"] + sorted(df["Dzień"].unique()), index=0
-)
-filter_client = filter_cols[1].text_input("Klient", value="")
-filter_slot_type = filter_cols[2].selectbox("Typ slotu", options=["Wszystkie"] + sorted(df["Typ"].unique()), index=0)
-filter_start_from = filter_cols[3].time_input("Start od", value=time(0, 0))
-filter_start_to   = filter_cols[3].time_input("Start do", value=time(23, 59), key="start_to")
-filter_end_from   = filter_cols[4].time_input("Koniec od", value=time(0, 0))
-filter_end_to     = filter_cols[4].time_input("Koniec do", value=time(23, 59), key="end_to")
+    # --- Filtrowanie danych ---
+    df_filtered = df.copy()
 
-# --- Nagłówek kolumn ---
-header_cols = st.columns(col_widths)
-headers = ["Dzień", "Klient", "Typ", "Start – Koniec", "Przedział przyjazdu", "Akcje"]
-for col, title in zip(header_cols, headers):
-    col.markdown(
-        f"<div style='background-color:#d9d9d9; font-weight:bold; padding:4px; border-radius:4px;'>{title}</div>",
-        unsafe_allow_html=True
-    )
+    if filter_day != "Wszystkie":
+        df_filtered = df_filtered[df_filtered["Dzień"] == filter_day]
+    if filter_client.strip():
+        df_filtered = df_filtered[df_filtered["Klient"].str.contains(filter_client.strip(), case=False)]
+    if filter_slot_type != "Wszystkie":
+        df_filtered = df_filtered[df_filtered["Typ"] == filter_slot_type]
 
-# --- Filtrowanie danych ---
-df_filtered = df.copy()
-if filter_day != "Wszystkie":
-    df_filtered = df_filtered[df_filtered["Dzień"] == filter_day]
-if filter_client.strip():
-    df_filtered = df_filtered[df_filtered["Klient"].str.contains(filter_client.strip(), case=False)]
-if filter_slot_type != "Wszystkie":
-    df_filtered = df_filtered[df_filtered["Typ"] == filter_slot_type]
+    # Filtr godzin Start i Koniec
+    df_filtered = df_filtered[
+        (df_filtered["Start"].dt.time >= filter_start_from) &
+        (df_filtered["Start"].dt.time <= filter_start_to) &
+        (df_filtered["Koniec"].dt.time >= filter_end_from) &
+        (df_filtered["Koniec"].dt.time <= filter_end_to)
+    ]
 
-# Filtr godzin Start i Koniec
-df_filtered = df_filtered[
-    (df_filtered["Start"].dt.time >= filter_start_from) &
-    (df_filtered["Start"].dt.time <= filter_start_to) &
-    (df_filtered["Koniec"].dt.time >= filter_end_from) &
-    (df_filtered["Koniec"].dt.time <= filter_end_to)
-]
+    # --- Wyświetlenie tabeli Streamlit ---
+    st.dataframe(df_filtered.drop(columns=["_id"]))
 
-# --- Wyświetlanie przefiltrowanych wierszy z przyciskiem Usuń ---
-for idx, row in df_filtered.iterrows():
-    row_cols = st.columns(col_widths)
-    row_cols[0].write(row["Dzień"])
-    row_cols[1].write(row["Klient"])
-    row_cols[2].write(row["Typ"])
-    row_cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
-    row_cols[4].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
-    if row_cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
-        delete_slot(row["Brygada"], row["Dzień"], row["_id"])
-        st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
-        st.rerun()
 
 # ---------------------- ZLECENIA BEZ TERMINU ----------------------
 st.subheader("⏳ Zlecenia bez terminu - Dyspozytor")
