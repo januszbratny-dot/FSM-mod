@@ -916,144 +916,88 @@ if not df.empty:
     st.plotly_chart(fig, use_container_width=True)
 
 
-# ---------------------- GANTT: Przedziały przyjazdu ----------------------
-arrival_slots = []
+
+# ---------------------- GANTT 1-DNIOWY: Przedziały przyjazdu (osobny wiersz na slot) ----------------------
+arrival_slots_day = []
 for b in st.session_state.brygady:
-    for d in week_days:
-        d_str = d.strftime("%Y-%m-%d")
-        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-        for s in slots:
-            # uwzględniamy tylko sloty z wyliczonym przedziałem przyjazdu
-            if s.get("arrival_window_start") and s.get("arrival_window_end"):
-                arrival_slots.append({
-                    "Brygada": b,
-                    "Dzień": d_str,
-                    "Klient": s["client"],
-                    "Start": s["arrival_window_start"],
-                    "Koniec": s["arrival_window_end"],
-                    "Slot pracy": f"{s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')}",
-                })
+    d_str = booking_day.strftime("%Y-%m-%d")
+    slots = st.session_state.schedules.get(b, {}).get(d_str, [])
+    for s in slots:
+        if s.get("arrival_window_start") and s.get("arrival_window_end"):
+            arrival_slots_day.append({
+                "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
+                "Brygada": b,
+                "Dzień": d_str,
+                "Klient": s["client"],
+                "Start": s["arrival_window_start"],
+                "Koniec": s["arrival_window_end"],
+                "Slot pracy": f"{s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')}",
+            })
 
-df_arrival = pd.DataFrame(arrival_slots)
+df_arrival_day = pd.DataFrame(arrival_slots_day)
 
-if not df_arrival.empty:
-    st.subheader("📊 Wykres Gantta – Przedziały przyjazdu brygad")
+if not df_arrival_day.empty:
+    st.subheader(f"📊 Gantt przedziałów przyjazdu – {booking_day.strftime('%A, %d %B %Y')}")
 
-    fig_arr = px.timeline(
-        df_arrival,
+    fig_arr_day = px.timeline(
+        df_arrival_day,
         x_start="Start",
         x_end="Koniec",
-        y="Brygada",
-        color="Klient",
-        hover_data=["Slot pracy"]
-    )
-    fig_arr.update_yaxes(autorange="reversed")  # odwrócona oś Y, jak w głównym Gantt
-
-    # Dodanie wizualizacji preferowanych przedziałów (jak w głównym Gantt)
-    for d in week_days:
-        for label, (s, e) in PREFERRED_SLOTS.items():
-            fig_arr.add_vrect(
-                x0=datetime.combine(d, s),
-                x1=datetime.combine(d, e),
-                fillcolor="rgba(200,200,200,0.15)",
-                opacity=0.2,
-                layer="below",
-                line_width=0
-            )
-            fig_arr.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
-            fig_arr.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
-
-    st.plotly_chart(fig_arr, use_container_width=True)
-else:
-    st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
-
-# ---------------------- GANTT: Przedziały przyjazdu (osobny wiersz na slot) ----------------------
-arrival_slots = []
-for b in st.session_state.brygady:
-    for d in week_days:
-        d_str = d.strftime("%Y-%m-%d")
-        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-        for s in slots:
-            if s.get("arrival_window_start") and s.get("arrival_window_end"):
-                # unikalny wiersz dla każdego slotu
-                arrival_slots.append({
-                    "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
-                    "Brygada": b,
-                    "Dzień": d_str,
-                    "Klient": s["client"],
-                    "Start": s["arrival_window_start"],
-                    "Koniec": s["arrival_window_end"],
-                    "Slot pracy": f"{s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')}",
-                })
-
-df_arrival = pd.DataFrame(arrival_slots)
-
-if not df_arrival.empty:
-    st.subheader("📊 Wykres Gantta – Przedziały przyjazdu brygad (osobny wiersz na slot)")
-
-    # użycie SlotID jako osi Y, żeby każdy slot był osobno
-    fig_arr = px.timeline(
-        df_arrival,
-        x_start="Start",
-        x_end="Koniec",
-        y="SlotID",
+        y="SlotID",  # każdy slot w osobnym wierszu
         color="Klient",
         hover_data=["Brygada", "Slot pracy"]
     )
-    fig_arr.update_yaxes(autorange="reversed")
+    fig_arr_day.update_yaxes(autorange="reversed")
 
-    # opcjonalnie dodanie wizualizacji preferowanych przedziałów
-    for d in week_days:
-        for label, (s, e) in PREFERRED_SLOTS.items():
-            fig_arr.add_vrect(
-                x0=datetime.combine(d, s),
-                x1=datetime.combine(d, e),
-                fillcolor="rgba(200,200,200,0.15)",
-                opacity=0.2,
-                layer="below",
-                line_width=0
-            )
-            fig_arr.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
-            fig_arr.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+    # Dodanie wizualizacji preferowanych przedziałów w tle
+    for label, (s, e) in PREFERRED_SLOTS.items():
+        fig_arr_day.add_vrect(
+            x0=datetime.combine(booking_day, s),
+            x1=datetime.combine(booking_day, e),
+            fillcolor="rgba(200,200,200,0.15)",
+            opacity=0.2,
+            layer="below",
+            line_width=0
+        )
+        fig_arr_day.add_vline(x=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
+        fig_arr_day.add_vline(x=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
 
-    st.plotly_chart(fig_arr, use_container_width=True)
+    st.plotly_chart(fig_arr_day, use_container_width=True)
 else:
-    st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
-# ---------------------- GANTT Z TRANSPARENTNYM PRZEDZIAŁEM PRZYJAZDU ----------------------
-# przygotowanie df
-dual_slots_transparent = []
-for b in st.session_state.brygady:
-    for d in week_days:
-        d_str = d.strftime("%Y-%m-%d")
-        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
-        for s in slots:
-            y_label = f"{b} – {s['client']} – {d_str}"
+    st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu w wybranym dniu.")
 
-            # Slot pracy – pełny kolor
-            dual_slots_transparent.append({
+# ---------------------- GANTT 1-DNIOWY: Praca + transparentny przedział przyjazdu ----------------------
+dual_slots_day = []
+for b in st.session_state.brygady:
+    d_str = booking_day.strftime("%Y-%m-%d")
+    slots = st.session_state.schedules.get(b, {}).get(d_str, [])
+    for s in slots:
+        y_label = f"{b} – {s['client']} – {d_str}"
+
+        # Slot pracy – pełny kolor
+        dual_slots_day.append({
+            "Y": y_label,
+            "Typ": "Slot pracy",
+            "Start": s["start"],
+            "Koniec": s["end"],
+        })
+
+        # Przedział przyjazdu – półprzezroczysty
+        if s.get("arrival_window_start") and s.get("arrival_window_end"):
+            dual_slots_day.append({
                 "Y": y_label,
-                "Typ": "Slot pracy",
-                "Start": s["start"],
-                "Koniec": s["end"],
+                "Typ": "Przedział przyjazdu",
+                "Start": s["arrival_window_start"],
+                "Koniec": s["arrival_window_end"],
             })
 
-            # Przedział przyjazdu – półprzezroczysty
-            if s.get("arrival_window_start") and s.get("arrival_window_end"):
-                dual_slots_transparent.append({
-                    "Y": y_label,
-                    "Typ": "Przedział przyjazdu",
-                    "Start": s["arrival_window_start"],
-                    "Koniec": s["arrival_window_end"],
-                })
+df_dual_day = pd.DataFrame(dual_slots_day)
 
-df_dual_transparent = pd.DataFrame(dual_slots_transparent)
+if not df_dual_day.empty:
+    st.subheader(f"📊 Gantt – Praca i przedział przyjazdu (transparentny) – {booking_day.strftime('%A, %d %B %Y')}")
 
-if not df_dual_transparent.empty:
-    st.subheader("📊 Gantt – Praca i przedział przyjazdu (transparentny)")
-
-    # Tworzymy wykres
-    fig_transparent = px.timeline(
-        df_dual_transparent,
+    fig_dual_day = px.timeline(
+        df_dual_day,
         x_start="Start",
         x_end="Koniec",
         y="Y",
@@ -1066,31 +1010,31 @@ if not df_dual_transparent.empty:
     )
 
     # Ustawienie przezroczystości per trace
-    for trace in fig_transparent.data:
+    for trace in fig_dual_day.data:
         if trace.name == "Przedział przyjazdu":
             trace.opacity = 0.3
         else:
             trace.opacity = 1.0
 
-    fig_transparent.update_yaxes(autorange="reversed")  # od góry w dół
+    fig_dual_day.update_yaxes(autorange="reversed")  # od góry w dół
 
-    # Preferowane przedziały w tle
-    for d in week_days:
-        for label, (s, e) in PREFERRED_SLOTS.items():
-            fig_transparent.add_vrect(
-                x0=datetime.combine(d, s),
-                x1=datetime.combine(d, e),
-                fillcolor="rgba(200,200,200,0.15)",
-                opacity=0.2,
-                layer="below",
-                line_width=0
-            )
-            fig_transparent.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
-            fig_transparent.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+    # Dodanie preferowanych przedziałów w tle
+    for label, (s, e) in PREFERRED_SLOTS.items():
+        fig_dual_day.add_vrect(
+            x0=datetime.combine(booking_day, s),
+            x1=datetime.combine(booking_day, e),
+            fillcolor="rgba(200,200,200,0.15)",
+            opacity=0.2,
+            layer="below",
+            line_width=0
+        )
+        fig_dual_day.add_vline(x=datetime.combine(booking_day, s), line_width=1, line_dash="dot")
+        fig_dual_day.add_vline(x=datetime.combine(booking_day, e), line_width=1, line_dash="dot")
 
-    st.plotly_chart(fig_transparent, use_container_width=True)
+    st.plotly_chart(fig_dual_day, use_container_width=True)
 else:
-    st.info("Brak danych do wyświetlenia Gantta z transparentnym przedziałem przyjazdu.")
+    st.info("Brak danych do wyświetlenia Gantta z transparentnym przedziałem przyjazdu w wybranym dniu.")
+
 
 # ---------------------- GANTT 1-DNIOWY: Praca + Przedział przyjazdu ----------------------
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu")
