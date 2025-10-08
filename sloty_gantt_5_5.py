@@ -1019,40 +1019,41 @@ if not df_arrival.empty:
     st.plotly_chart(fig_arr, use_container_width=True)
 else:
     st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
-# ---------------------- PODWÓJNY GANTT W JEDNYM WIERSZU ----------------------
-dual_slots_same_row = []
+# ---------------------- GANTT Z TRANSPARENTNYM PRZEDZIAŁEM PRZYJAZDU ----------------------
+dual_slots_transparent = []
 for b in st.session_state.brygady:
     for d in week_days:
         d_str = d.strftime("%Y-%m-%d")
         slots = st.session_state.schedules.get(b, {}).get(d_str, [])
         for s in slots:
-            # unikalna etykieta Y: Brygada – Klient – Dzień
             y_label = f"{b} – {s['client']} – {d_str}"
 
-            # Slot pracy
-            dual_slots_same_row.append({
+            # Slot pracy – pełny kolor
+            dual_slots_transparent.append({
                 "Y": y_label,
                 "Typ": "Slot pracy",
                 "Start": s["start"],
-                "Koniec": s["end"]
+                "Koniec": s["end"],
+                "opacity": 1.0
             })
 
-            # Przedział przyjazdu (jeśli istnieje)
+            # Przedział przyjazdu – półprzezroczysty
             if s.get("arrival_window_start") and s.get("arrival_window_end"):
-                dual_slots_same_row.append({
+                dual_slots_transparent.append({
                     "Y": y_label,
                     "Typ": "Przedział przyjazdu",
                     "Start": s["arrival_window_start"],
-                    "Koniec": s["arrival_window_end"]
+                    "Koniec": s["arrival_window_end"],
+                    "opacity": 0.3
                 })
 
-df_dual_same_row = pd.DataFrame(dual_slots_same_row)
+df_dual_transparent = pd.DataFrame(dual_slots_transparent)
 
-if not df_dual_same_row.empty:
-    st.subheader("📊 Gantt – Slot pracy i przedział przyjazdu w tym samym wierszu")
+if not df_dual_transparent.empty:
+    st.subheader("📊 Gantt – Praca i przedział przyjazdu (transparentny)")
 
-    fig_same_row = px.timeline(
-        df_dual_same_row,
+    fig_transparent = px.timeline(
+        df_dual_transparent,
         x_start="Start",
         x_end="Koniec",
         y="Y",
@@ -1063,12 +1064,17 @@ if not df_dual_same_row.empty:
         },
         hover_data=["Typ"]
     )
-    fig_same_row.update_yaxes(autorange="reversed")  # aby od góry w dół
 
-    # Dodanie preferowanych przedziałów w tle
+    # Ustawienia przezroczystości
+    for i, t in enumerate(df_dual_transparent["Typ"]):
+        fig_transparent.data[i].opacity = df_dual_transparent["opacity"].iloc[i]
+
+    fig_transparent.update_yaxes(autorange="reversed")  # od góry w dół
+
+    # Preferowane przedziały w tle
     for d in week_days:
         for label, (s, e) in PREFERRED_SLOTS.items():
-            fig_same_row.add_vrect(
+            fig_transparent.add_vrect(
                 x0=datetime.combine(d, s),
                 x1=datetime.combine(d, e),
                 fillcolor="rgba(200,200,200,0.15)",
@@ -1076,12 +1082,12 @@ if not df_dual_same_row.empty:
                 layer="below",
                 line_width=0
             )
-            fig_same_row.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
-            fig_same_row.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+            fig_transparent.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
+            fig_transparent.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
 
-    st.plotly_chart(fig_same_row, use_container_width=True)
+    st.plotly_chart(fig_transparent, use_container_width=True)
 else:
-    st.info("Brak danych do wyświetlenia Gantta z przedziałami przyjazdu.")
+    st.info("Brak danych do wyświetlenia Gantta z transparentnym przedziałem przyjazdu.")
 
 
 # ---------------------- PODSUMOWANIE ----------------------
