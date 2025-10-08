@@ -842,7 +842,7 @@ for col, title in zip(header_cols, headers):
 # Wiersze z danymi
 if not df.empty:
     for idx, row in df.iterrows():
-        cols = st.columns([1, 2, 1.2, 2, 1, 1])
+        cols = st.columns([1, 2, 1, 1.2, 1, 1])
         cols[0].write(row["Dzień"])
         cols[1].write(f"**{row['Klient']}** — {row['Typ']}")
         cols[2].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
