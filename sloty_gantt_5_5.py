@@ -833,66 +833,24 @@ else:
 # management: delete individual slots
 st.subheader("🧰 Zarządzaj slotami")
 
-# --- Filtry dla wszystkich kolumn ---
-col_filter1, col_filter2, col_filter3, col_filter4, col_filter5, col_filter6, col_filter7 = st.columns([1, 1.5, 1.5, 1, 1, 1, 1])
-filter_day = col_filter1.selectbox(
-    "Dzień",
-    options=["Wszystkie"] + sorted(df["Dzień"].unique()),
-    index=0
+# --- Definicja proporcji kolumn (dla filtrów, nagłówków i danych) ---
+col_widths = [1, 1.5, 1.2, 1.5, 1.2, 1]  # proporcje odpowiadające kolumnom tabeli
+
+# --- Filtry ---
+filter_cols = st.columns(col_widths)
+
+filter_day = filter_cols[0].selectbox(
+    "Dzień", options=["Wszystkie"] + sorted(df["Dzień"].unique()), index=0
 )
+filter_client = filter_cols[1].text_input("Klient", value="")
+filter_slot_type = filter_cols[2].selectbox("Typ slotu", options=["Wszystkie"] + sorted(df["Typ"].unique()), index=0)
+filter_start_from = filter_cols[3].time_input("Start od", value=time(0, 0))
+filter_start_to   = filter_cols[3].time_input("Start do", value=time(23, 59), key="start_to")
+filter_end_from   = filter_cols[4].time_input("Koniec od", value=time(0, 0))
+filter_end_to     = filter_cols[4].time_input("Koniec do", value=time(23, 59), key="end_to")
 
-filter_brygada = col_filter2.selectbox(
-    "Brygada",
-    options=["Wszystkie"] + st.session_state.brygady,
-    index=0
-)
-
-filter_client = col_filter3.text_input("Klient", value="")
-
-filter_slot_type = col_filter4.selectbox(
-    "Typ slotu",
-    options=["Wszystkie"] + sorted(df["Typ"].unique()),
-    index=0
-)
-
-# Filtry godzin Start i Koniec
-filter_start_from = col_filter5.time_input("Start od", value=time(0, 0))
-filter_start_to   = col_filter6.time_input("Start do", value=time(23, 59))
-filter_end_to     = col_filter7.time_input("Koniec do", value=time(23, 59))
-
-filter_arrival = st.text_input("Przedział przyjazdu (HH:MM)", value="")
-
-# --- Filtrowanie danych ---
-df_filtered = df.copy()
-
-if filter_day != "Wszystkie":
-    df_filtered = df_filtered[df_filtered["Dzień"] == filter_day]
-
-if filter_brygada != "Wszystkie":
-    df_filtered = df_filtered[df_filtered["Brygada"] == filter_brygada]
-
-if filter_client.strip():
-    df_filtered = df_filtered[df_filtered["Klient"].str.contains(filter_client.strip(), case=False)]
-
-if filter_slot_type != "Wszystkie":
-    df_filtered = df_filtered[df_filtered["Typ"] == filter_slot_type]
-
-# Filtr godzin Start
-df_filtered = df_filtered[
-    (df_filtered["Start"].dt.time >= filter_start_from) &
-    (df_filtered["Start"].dt.time <= filter_start_to)
-]
-
-# Filtr godzin Koniec
-df_filtered = df_filtered[
-    (df_filtered["Koniec"].dt.time <= filter_end_to)
-]
-
-if filter_arrival.strip():
-    df_filtered = df_filtered[df_filtered["Przedział przyjazdu"].str.contains(filter_arrival.strip(), na=False)]
-
-# --- Nagłówek kolumn (stylizowany) ---
-header_cols = st.columns([1, 1.5, 1.2, 1.5, 1, 1])
+# --- Nagłówek kolumn ---
+header_cols = st.columns(col_widths)
 headers = ["Dzień", "Klient", "Typ", "Start – Koniec", "Przedział przyjazdu", "Akcje"]
 for col, title in zip(header_cols, headers):
     col.markdown(
@@ -900,15 +858,32 @@ for col, title in zip(header_cols, headers):
         unsafe_allow_html=True
     )
 
+# --- Filtrowanie danych ---
+df_filtered = df.copy()
+if filter_day != "Wszystkie":
+    df_filtered = df_filtered[df_filtered["Dzień"] == filter_day]
+if filter_client.strip():
+    df_filtered = df_filtered[df_filtered["Klient"].str.contains(filter_client.strip(), case=False)]
+if filter_slot_type != "Wszystkie":
+    df_filtered = df_filtered[df_filtered["Typ"] == filter_slot_type]
+
+# Filtr godzin Start i Koniec
+df_filtered = df_filtered[
+    (df_filtered["Start"].dt.time >= filter_start_from) &
+    (df_filtered["Start"].dt.time <= filter_start_to) &
+    (df_filtered["Koniec"].dt.time >= filter_end_from) &
+    (df_filtered["Koniec"].dt.time <= filter_end_to)
+]
+
 # --- Wyświetlanie przefiltrowanych wierszy z przyciskiem Usuń ---
 for idx, row in df_filtered.iterrows():
-    cols = st.columns([1, 1.5, 1.2, 1.5, 1, 1])
-    cols[0].write(row["Dzień"])
-    cols[1].write(row["Klient"])
-    cols[2].write(row["Typ"])
-    cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
-    cols[4].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
-    if cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
+    row_cols = st.columns(col_widths)
+    row_cols[0].write(row["Dzień"])
+    row_cols[1].write(row["Klient"])
+    row_cols[2].write(row["Typ"])
+    row_cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
+    row_cols[4].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
+    if row_cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
         delete_slot(row["Brygada"], row["Dzień"], row["_id"])
         st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
         st.rerun()
