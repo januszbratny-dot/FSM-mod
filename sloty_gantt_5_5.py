@@ -967,6 +967,122 @@ if not df_arrival.empty:
 else:
     st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
 
+# ---------------------- GANTT: Przedziały przyjazdu (osobny wiersz na slot) ----------------------
+arrival_slots = []
+for b in st.session_state.brygady:
+    for d in week_days:
+        d_str = d.strftime("%Y-%m-%d")
+        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
+        for s in slots:
+            if s.get("arrival_window_start") and s.get("arrival_window_end"):
+                # unikalny wiersz dla każdego slotu
+                arrival_slots.append({
+                    "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
+                    "Brygada": b,
+                    "Dzień": d_str,
+                    "Klient": s["client"],
+                    "Start": s["arrival_window_start"],
+                    "Koniec": s["arrival_window_end"],
+                    "Slot pracy": f"{s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')}",
+                })
+
+df_arrival = pd.DataFrame(arrival_slots)
+
+if not df_arrival.empty:
+    st.subheader("📊 Wykres Gantta – Przedziały przyjazdu brygad (osobny wiersz na slot)")
+
+    # użycie SlotID jako osi Y, żeby każdy slot był osobno
+    fig_arr = px.timeline(
+        df_arrival,
+        x_start="Start",
+        x_end="Koniec",
+        y="SlotID",
+        color="Klient",
+        hover_data=["Brygada", "Slot pracy"]
+    )
+    fig_arr.update_yaxes(autorange="reversed")
+
+    # opcjonalnie dodanie wizualizacji preferowanych przedziałów
+    for d in week_days:
+        for label, (s, e) in PREFERRED_SLOTS.items():
+            fig_arr.add_vrect(
+                x0=datetime.combine(d, s),
+                x1=datetime.combine(d, e),
+                fillcolor="rgba(200,200,200,0.15)",
+                opacity=0.2,
+                layer="below",
+                line_width=0
+            )
+            fig_arr.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
+            fig_arr.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+
+    st.plotly_chart(fig_arr, use_container_width=True)
+else:
+    st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
+# ---------------------- PODWÓJNY GANTT: Praca + Przedział przyjazdu ----------------------
+dual_slots = []
+for b in st.session_state.brygady:
+    for d in week_days:
+        d_str = d.strftime("%Y-%m-%d")
+        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
+        for s in slots:
+            # Slot pracy
+            dual_slots.append({
+                "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
+                "Brygada": b,
+                "Dzień": d_str,
+                "Klient": s["client"],
+                "Typ": "Slot pracy",
+                "Start": s["start"],
+                "Koniec": s["end"]
+            })
+            # Przedział przyjazdu
+            if s.get("arrival_window_start") and s.get("arrival_window_end"):
+                dual_slots.append({
+                    "SlotID": f"{b}_{s['client']}_{s['start'].isoformat()}",
+                    "Brygada": b,
+                    "Dzień": d_str,
+                    "Klient": s["client"],
+                    "Typ": "Przedział przyjazdu",
+                    "Start": s["arrival_window_start"],
+                    "Koniec": s["arrival_window_end"]
+                })
+
+df_dual = pd.DataFrame(dual_slots)
+
+if not df_dual.empty:
+    st.subheader("📊 Podwójny Gantt – Slot pracy i przedział przyjazdu")
+
+    # Oś Y: unikalny SlotID (każdy slot w osobnym wierszu)
+    fig_dual = px.timeline(
+        df_dual,
+        x_start="Start",
+        x_end="Koniec",
+        y="SlotID",
+        color="Typ",  # rozróżnienie pasków pracy/przyjazdu
+        hover_data=["Brygada", "Klient", "Typ"]
+    )
+    fig_dual.update_yaxes(autorange="reversed")
+
+    # Dodanie wizualizacji preferowanych przedziałów
+    for d in week_days:
+        for label, (s, e) in PREFERRED_SLOTS.items():
+            fig_dual.add_vrect(
+                x0=datetime.combine(d, s),
+                x1=datetime.combine(d, e),
+                fillcolor="rgba(200,200,200,0.15)",
+                opacity=0.2,
+                layer="below",
+                line_width=0
+            )
+            fig_dual.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
+            fig_dual.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+
+    st.plotly_chart(fig_dual, use_container_width=True)
+else:
+    st.info("Brak danych do wyświetlenia podwójnego Gantta.")
+
+
 
 # ---------------------- PODSUMOWANIE ----------------------
 st.subheader("📌 Podsumowanie")
