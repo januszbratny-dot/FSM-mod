@@ -834,8 +834,8 @@ else:
 st.subheader("🧰 Zarządzaj slotami")
 
 # Nagłówek kolumn z tłem i pogrubieniem
-header_cols = st.columns([1, 2, 1.2, 2, 1, 1])
-headers = ["Dzień", "Klient + Typ", "Start – Koniec", "Przedział przyjazdu", "Brygada", "Akcje"]
+header_cols = st.columns([1, 2, 1, 1.2, 1, 1])
+headers = ["Dzień", "Klient + Typ", "Przedział przyjazdu", "Start – Koniec", "Brygada", "Akcje"]
 for col, title in zip(header_cols, headers):
     col.markdown(f"<div style='background-color:#f0f0f0; font-weight:bold; padding:4px; border-radius:4px;'>{title}</div>", unsafe_allow_html=True)
 
@@ -845,8 +845,8 @@ if not df.empty:
         cols = st.columns([1, 2, 1.2, 2, 1, 1])
         cols[0].write(row["Dzień"])
         cols[1].write(f"**{row['Klient']}** — {row['Typ']}")
-        cols[2].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
-        cols[3].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
+        cols[2].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
+        cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
         cols[4].write(row["Brygada"])
         if cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
             delete_slot(row["Brygada"], row["Dzień"], row["_id"])
