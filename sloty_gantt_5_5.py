@@ -850,6 +850,7 @@ if df.empty:
 else:
     st.dataframe(df.drop(columns=["_id"]))
 
+
 # ---------------------- ZLECENIA BEZ TERMINU ----------------------
 st.subheader("⏳ Zlecenia bez terminu - Dyspozytor")
 
@@ -874,34 +875,6 @@ if st.session_state.unscheduled_orders:
             save_state_to_json()          # <- KLUCZ: zapisz zmiany!
             st.success(f"❌ Zlecenie {o['client']} usunięte.")
             st.rerun()
-
-#----------------------------------------------------
-# management: delete individual slots
-st.subheader("🧰 Zarządzaj slotami")
-
-# Nagłówek kolumn z tłem i pogrubieniem
-header_cols = st.columns([1, 2, 1, 1.2, 1, 1])
-headers = ["Dzień", "Klient + Typ", "Przedział przyjazdu", "Start – Koniec", "Brygada", "Akcje"]
-for col, title in zip(header_cols, headers):
-    col.markdown(f"<div style='background-color:#f0f0f0; font-weight:bold; padding:4px; border-radius:4px;'>{title}</div>", unsafe_allow_html=True)
-
-# Wiersze z danymi
-if not df.empty:
-    for idx, row in df.iterrows():
-        cols = st.columns([1, 2, 1, 1.2, 1, 1])
-        cols[0].write(row["Dzień"])
-        cols[1].write(f"**{row['Klient']}** — {row['Typ']}")
-        cols[2].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
-        cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
-        cols[4].write(row["Brygada"])
-        if cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
-            delete_slot(row["Brygada"], row["Dzień"], row["_id"])
-            st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
-            st.rerun()
-
-
-
-
 
 # ---------------------- GANTT 2 ----------------------
 st.subheader(f"📊 Gantt dnia: {booking_day.strftime('%A, %d %B %Y')} – Praca i przedział przyjazdu (osobno dla każdej brygady)")
@@ -975,6 +948,36 @@ for b in st.session_state.brygady:
 
     st.markdown(f"### Brygada: {b}")
     st.plotly_chart(fig_day, use_container_width=True)
+
+#----------------------------------------------------
+# management: delete individual slots
+st.subheader("🧰 Zarządzaj slotami")
+
+# Nagłówek kolumn z tłem i pogrubieniem
+header_cols = st.columns([1, 2, 1, 1.2, 1, 1])
+headers = ["Dzień", "Klient + Typ", "Przedział przyjazdu", "Start – Koniec", "Brygada", "Akcje"]
+for col, title in zip(header_cols, headers):
+    col.markdown(f"<div style='background-color:#f0f0f0; font-weight:bold; padding:4px; border-radius:4px;'>{title}</div>", unsafe_allow_html=True)
+
+# Wiersze z danymi
+if not df.empty:
+    for idx, row in df.iterrows():
+        cols = st.columns([1, 2, 1, 1.2, 1, 1])
+        cols[0].write(row["Dzień"])
+        cols[1].write(f"**{row['Klient']}** — {row['Typ']}")
+        cols[2].write(row["Przedział przyjazdu"] if row["Przedział przyjazdu"] else "-")
+        cols[3].write(f"{row['Start'].strftime('%H:%M')} - {row['Koniec'].strftime('%H:%M')}")
+        cols[4].write(row["Brygada"])
+        if cols[5].button("Usuń", key=f"del_{row['Brygada']}_{row['_id']}"):
+            delete_slot(row["Brygada"], row["Dzień"], row["_id"])
+            st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
+            st.rerun()
+
+
+
+
+
+
 
 
 # ---------------------- GANTT ----------------------
