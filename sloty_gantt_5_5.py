@@ -597,7 +597,7 @@ week_ref = date.today() + timedelta(weeks=st.session_state.week_offset)
 week_days = get_week_days(week_ref)
 st.sidebar.write(f"Tydzień: {week_days[0].strftime('%d-%m-%Y')} – {week_days[-1].strftime('%d-%m-%Y')}")
 
-# ---------------------- Dodaj klienta (Rezerwacja terminu) ----------------------
+# ---------------------- Dodaj klienta (zmieniony UI: wybór dostępnego slotu) ----------------------
 st.subheader("➕ Rezerwacja terminu")
 
 # Imię klienta
@@ -605,7 +605,7 @@ with st.container():
     default_client = f"Klient {st.session_state.client_counter}"
     client_name = st.text_input("Nazwa klienta", value=default_client)
 
-# Wybór typu slotu
+# Wybór typu slotu (pozostawiamy)
 slot_names = [s["name"] for s in st.session_state.slot_types]
 if not slot_names:
     slot_names = ["Standard"]
@@ -616,7 +616,7 @@ slot_type_name = st.selectbox("Typ slotu", slot_names, index=idx)
 slot_type = next((s for s in st.session_state.slot_types if s["name"] == slot_type_name), slot_names[0])
 slot_duration = timedelta(minutes=slot_type["minutes"])
 
-# Navigator dni dla rezerwacji
+# Navigator dni dla rezerwacji (pojedynczy dzień, z możliwością przejścia)
 if "booking_day" not in st.session_state:
     st.session_state.booking_day = date.today()
 
@@ -628,13 +628,7 @@ with col_next:
     if st.button("Następny dzień ➡️", key="booking_next"):
         st.session_state.booking_day += timedelta(days=1)
 with col_mid:
-    # Polskie dni tygodnia i miesiące
-    dni_tyg = ["Poniedziałek","Wtorek","Środa","Czwartek","Piątek","Sobota","Niedziela"]
-    miesiace = ["Stycznia","Lutego","Marca","Kwietnia","Maja","Czerwca",
-                "Lipca","Sierpnia","Września","Października","Listopada","Grudnia"]
-    dzien = dni_tyg[st.session_state.booking_day.weekday()]
-    miesiac = miesiace[st.session_state.booking_day.month - 1]
-    st.markdown(f"### {dzien}, {st.session_state.booking_day.day} {miesiac} {st.session_state.booking_day.year}")
+    st.markdown(f"### {st.session_state.booking_day.strftime('%A, %d %B %Y')}")
 
 booking_day = st.session_state.booking_day
 
@@ -647,30 +641,23 @@ available_slots = get_available_slots_for_day(booking_day, slot_minutes)
 if not available_slots:
     st.info("Brak dostępnych slotów dla wybranego dnia.")
 else:
-    # Dodaj CSS dla zielonych przycisków (białe litery)
-    st.markdown("""
-    <style>
-    div.stButton > button:first-child {
-        background-color: grey;
-        color: white;
-    }
-    </style>
-    """, unsafe_allow_html=True)
     for i, s in enumerate(available_slots):
-        # Zmiana: 4 kolumny - Godzina, Brygady, Start/Koniec, Przycisk
         col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
 
-        # Wyświetl godzinę slotu (tylko godziny)
-        col1.write(f"🚗 Przedział przyjazdu: {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
+        # Wyświetl godzinę slotu
+        col1.write(f"🕐 {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
 
         # Wyświetl dostępne brygady
         col2.write(f"👷 Brygady: {', '.join(s['brygady'])}")
 
-        # Kolumna Start i Koniec (pełna data + godzina)
-        col3.write(f"⏱️ Start: {s['start'].strftime('%Y-%m-%d %H:%M')}\nKoniec: {s['end'].strftime('%Y-%m-%d %H:%M')}")
+        # Oblicz przedział przyjazdu na podstawie ustawień
+        czas_przed = int(st.session_state.get('czas_rezerwowy_przed', 90))
+        czas_po = int(st.session_state.get('czas_rezerwowy_po', 90))
+        arrival_start, arrival_end = oblicz_przedzial_przyjazdu(s['start'], czas_przed, czas_po)
+        col3.write(f"🚗 Przedział przyjazdu: {arrival_start.strftime('%H:%M')} – {arrival_end.strftime('%H:%M')}")
 
         # Przycisk rezerwacji slotu
-        if col4.button(f"Zarezerwuj w tym slocie", key=f"book_{i}"):
+        if col4.button("Zarezerwuj w tym slocie", key=f"book_{i}"):
             brygada = s['brygady'][0]  # wybieramy pierwszą dostępną brygadę
             slot = {
                 "start": s["start"],
@@ -685,9 +672,8 @@ else:
             st.rerun()
 
 
-
 # ---------------------- AUTO-FILL FULL DAY (BEZPIECZNY) ----------------------
-st.subheader("⚡ Automatyczne dociążenie wszystkich brygad (przyspieszenie testowania)")
+st.subheader("⚡ Automatyczne dociążenie wszystkich brygad")
 
 # wybór dnia do autofill
 day_autofill = st.date_input(
