@@ -835,28 +835,34 @@ st.markdown("### 📦 Zlecenia bez terminu")
 
 if st.session_state.unscheduled_orders:
     for idx, order in enumerate(st.session_state.unscheduled_orders):
-        with st.expander(f"{order['client_name']} - {order['slot_type']}"):
-            st.write(f"Typ slotu: {order['slot_type']}")
-            st.write(f"Priorytet: {order.get('priority', 'brak')}")
-            st.write(f"Preferowany dzień: {order.get('preferred_day', 'dowolny')}")
-            st.write(f"Preferowany czas: {order.get('preferred_time', 'dowolny')}")
+        client_name = order.get("client_name", "Nieznany klient")
+        slot_type = order.get("slot_type", "Brak typu")
+        preferred_day = order.get("preferred_day", "dowolny")
+        preferred_time = order.get("preferred_time", "dowolny")
+        priority = order.get("priority", "brak")
 
-            # Usunięcie z listy
+        with st.expander(f"{client_name} - {slot_type}"):
+            st.write(f"Typ slotu: {slot_type}")
+            st.write(f"Priorytet: {priority}")
+            st.write(f"Preferowany dzień: {preferred_day}")
+            st.write(f"Preferowany czas: {preferred_time}")
+
+            # Usuń zlecenie
             if st.button("🗑️ Usuń zlecenie", key=f"delete_unscheduled_{idx}"):
                 del st.session_state.unscheduled_orders[idx]
                 save_schedules()
                 st.rerun()
 
-            # --- NOWA FUNKCJA: przypisanie wolnego slotu ---
+            # Przypisz wolny slot
             if st.button("🧭 Przypisz wolny slot", key=f"assign_slot_{idx}"):
                 assigned = schedule_client_immediately(
-                    client_name=order["client_name"],
-                    slot_type_name=order["slot_type"],
+                    client_name=client_name,
+                    slot_type_name=slot_type,
                     preferred_day=order.get("preferred_day"),
                     preferred_time=order.get("preferred_time"),
                 )
                 if assigned:
-                    st.success(f"✅ Zlecenie '{order['client_name']}' przypisano do {assigned['day']} ({assigned['brygada']})")
+                    st.success(f"✅ Zlecenie '{client_name}' przypisano do {assigned['day']} ({assigned['brygada']})")
                     del st.session_state.unscheduled_orders[idx]
                     save_schedules()
                     st.rerun()
@@ -864,7 +870,6 @@ if st.session_state.unscheduled_orders:
                     st.warning("⚠️ Brak dostępnych slotów dla tego zlecenia.")
 else:
     st.info("Brak zleceń oczekujących na przydzielenie terminu.")
-
 
 #----------------------------------------------------
 # management: delete individual slots
