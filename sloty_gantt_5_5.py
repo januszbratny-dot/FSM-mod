@@ -915,6 +915,59 @@ if not df.empty:
 
     st.plotly_chart(fig, use_container_width=True)
 
+
+# ---------------------- GANTT: Przedziały przyjazdu ----------------------
+arrival_slots = []
+for b in st.session_state.brygady:
+    for d in week_days:
+        d_str = d.strftime("%Y-%m-%d")
+        slots = st.session_state.schedules.get(b, {}).get(d_str, [])
+        for s in slots:
+            # uwzględniamy tylko sloty z wyliczonym przedziałem przyjazdu
+            if s.get("arrival_window_start") and s.get("arrival_window_end"):
+                arrival_slots.append({
+                    "Brygada": b,
+                    "Dzień": d_str,
+                    "Klient": s["client"],
+                    "Start": s["arrival_window_start"],
+                    "Koniec": s["arrival_window_end"],
+                    "Slot pracy": f"{s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')}",
+                })
+
+df_arrival = pd.DataFrame(arrival_slots)
+
+if not df_arrival.empty:
+    st.subheader("📊 Wykres Gantta – Przedziały przyjazdu brygad")
+
+    fig_arr = px.timeline(
+        df_arrival,
+        x_start="Start",
+        x_end="Koniec",
+        y="Brygada",
+        color="Klient",
+        hover_data=["Slot pracy"]
+    )
+    fig_arr.update_yaxes(autorange="reversed")  # odwrócona oś Y, jak w głównym Gantt
+
+    # Dodanie wizualizacji preferowanych przedziałów (jak w głównym Gantt)
+    for d in week_days:
+        for label, (s, e) in PREFERRED_SLOTS.items():
+            fig_arr.add_vrect(
+                x0=datetime.combine(d, s),
+                x1=datetime.combine(d, e),
+                fillcolor="rgba(200,200,200,0.15)",
+                opacity=0.2,
+                layer="below",
+                line_width=0
+            )
+            fig_arr.add_vline(x=datetime.combine(d, s), line_width=1, line_dash="dot")
+            fig_arr.add_vline(x=datetime.combine(d, e), line_width=1, line_dash="dot")
+
+    st.plotly_chart(fig_arr, use_container_width=True)
+else:
+    st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
+
+
 # ---------------------- PODSUMOWANIE ----------------------
 st.subheader("📌 Podsumowanie")
 st.write(f"✅ Dodano klientów: {len(st.session_state.clients_added)}")
