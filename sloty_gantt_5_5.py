@@ -1020,6 +1020,7 @@ if not df_arrival.empty:
 else:
     st.info("Brak danych do wyświetlenia Gantta dla przedziałów przyjazdu.")
 # ---------------------- GANTT Z TRANSPARENTNYM PRZEDZIAŁEM PRZYJAZDU ----------------------
+# przygotowanie df
 dual_slots_transparent = []
 for b in st.session_state.brygady:
     for d in week_days:
@@ -1034,7 +1035,6 @@ for b in st.session_state.brygady:
                 "Typ": "Slot pracy",
                 "Start": s["start"],
                 "Koniec": s["end"],
-                "opacity": 1.0
             })
 
             # Przedział przyjazdu – półprzezroczysty
@@ -1044,7 +1044,6 @@ for b in st.session_state.brygady:
                     "Typ": "Przedział przyjazdu",
                     "Start": s["arrival_window_start"],
                     "Koniec": s["arrival_window_end"],
-                    "opacity": 0.3
                 })
 
 df_dual_transparent = pd.DataFrame(dual_slots_transparent)
@@ -1052,6 +1051,7 @@ df_dual_transparent = pd.DataFrame(dual_slots_transparent)
 if not df_dual_transparent.empty:
     st.subheader("📊 Gantt – Praca i przedział przyjazdu (transparentny)")
 
+    # Tworzymy wykres
     fig_transparent = px.timeline(
         df_dual_transparent,
         x_start="Start",
@@ -1065,9 +1065,12 @@ if not df_dual_transparent.empty:
         hover_data=["Typ"]
     )
 
-    # Ustawienia przezroczystości
-    for i, t in enumerate(df_dual_transparent["Typ"]):
-        fig_transparent.data[i].opacity = df_dual_transparent["opacity"].iloc[i]
+    # Ustawienie przezroczystości per trace
+    for trace in fig_transparent.data:
+        if trace.name == "Przedział przyjazdu":
+            trace.opacity = 0.3
+        else:
+            trace.opacity = 1.0
 
     fig_transparent.update_yaxes(autorange="reversed")  # od góry w dół
 
@@ -1088,6 +1091,7 @@ if not df_dual_transparent.empty:
     st.plotly_chart(fig_transparent, use_container_width=True)
 else:
     st.info("Brak danych do wyświetlenia Gantta z transparentnym przedziałem przyjazdu.")
+
 
 
 # ---------------------- PODSUMOWANIE ----------------------
