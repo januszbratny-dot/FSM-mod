@@ -829,32 +829,38 @@ if df.empty:
     st.info("Brak zaplanowanych slotów w tym tygodniu.")
 else:
     st.dataframe(df.drop(columns=["_id"]))
-
+#----------------------------------------------------
 # management: delete individual slots
 st.subheader("🧰 Zarządzaj slotami")
 
 # --- Filtry dla wszystkich kolumn ---
-col_filter1, col_filter2, col_filter3, col_filter4, col_filter5 = st.columns([1, 1, 1, 1, 1])
+col_filter1, col_filter2, col_filter3, col_filter4, col_filter5, col_filter6, col_filter7 = st.columns([1, 1.5, 1.5, 1, 1, 1, 1])
 filter_day = col_filter1.selectbox(
-    "Filtruj po dniu",
+    "Dzień",
     options=["Wszystkie"] + sorted(df["Dzień"].unique()),
     index=0
 )
 
 filter_brygada = col_filter2.selectbox(
-    "Filtruj po brygadzie",
+    "Brygada",
     options=["Wszystkie"] + st.session_state.brygady,
     index=0
 )
 
-filter_client = col_filter3.text_input("Filtruj po kliencie", value="")
+filter_client = col_filter3.text_input("Klient", value="")
+
 filter_slot_type = col_filter4.selectbox(
-    "Filtruj po typie slotu",
+    "Typ slotu",
     options=["Wszystkie"] + sorted(df["Typ"].unique()),
     index=0
 )
 
-filter_arrival = col_filter5.text_input("Filtruj po przedziale przyjazdu (HH:MM)", value="")
+# Filtry godzin Start i Koniec
+filter_start_from = col_filter5.time_input("Start od", value=time(0, 0))
+filter_start_to   = col_filter6.time_input("Start do", value=time(23, 59))
+filter_end_to     = col_filter7.time_input("Koniec do", value=time(23, 59))
+
+filter_arrival = st.text_input("Przedział przyjazdu (HH:MM)", value="")
 
 # --- Filtrowanie danych ---
 df_filtered = df.copy()
@@ -870,6 +876,17 @@ if filter_client.strip():
 
 if filter_slot_type != "Wszystkie":
     df_filtered = df_filtered[df_filtered["Typ"] == filter_slot_type]
+
+# Filtr godzin Start
+df_filtered = df_filtered[
+    (df_filtered["Start"].dt.time >= filter_start_from) &
+    (df_filtered["Start"].dt.time <= filter_start_to)
+]
+
+# Filtr godzin Koniec
+df_filtered = df_filtered[
+    (df_filtered["Koniec"].dt.time <= filter_end_to)
+]
 
 if filter_arrival.strip():
     df_filtered = df_filtered[df_filtered["Przedział przyjazdu"].str.contains(filter_arrival.strip(), na=False)]
@@ -895,8 +912,6 @@ for idx, row in df_filtered.iterrows():
         delete_slot(row["Brygada"], row["Dzień"], row["_id"])
         st.success(f"✅ Slot dla {row['Klient']} w brygadzie {row['Brygada']} usunięty.")
         st.rerun()
-
-
 
 # ---------------------- ZLECENIA BEZ TERMINU ----------------------
 st.subheader("⏳ Zlecenia bez terminu - Dyspozytor")
