@@ -272,11 +272,11 @@ def add_slot_to_brygada(brygada: str, day: date, slot: Dict, save: bool = True):
 
     # Pobierz czasy rezerwowe
     try:
-        czas_przed = int(st.session_state.get("czas_rezerwowy_przed", 90))
-        czas_po = int(st.session_state.get("czas_rezerwowy_po", 90))
+        czas_przed = int(st.session_state.get("czas_rezerwowy_przed", 30))
+        czas_po = int(st.session_state.get("czas_rezerwowy_po", 30))
     except Exception:
-        czas_przed = 90
-        czas_po = 90
+        czas_przed = 30
+        czas_po = 30
 
     # Godziny pracy brygady
     wh_start, wh_end = st.session_state.working_hours.get(brygada, (DEFAULT_WORK_START, DEFAULT_WORK_END))
@@ -579,10 +579,10 @@ with st.sidebar:
     st.subheader("🕓 Czas rezerwowy (przyjazd Brygady)")
     st.write("Ustaw w minutach: przed i po czasie rozpoczęcia slotu.")
     st.session_state.czas_rezerwowy_przed = st.number_input(
-        "Czas rezerwowy przed (minuty)", min_value=0, max_value=180, value=90, step=5, key="czas_przed"
+        "Czas rezerwowy przed (minuty)", min_value=0, max_value=180, value=30, step=5, key="czas_przed"
     )
     st.session_state.czas_rezerwowy_po = st.number_input(
-        "Czas rezerwowy po (minuty)", min_value=0, max_value=180, value=90, step=5, key="czas_po"
+        "Czas rezerwowy po (minuty)", min_value=0, max_value=180, value=30, step=5, key="czas_po"
     )
 
 # week navigation
@@ -646,11 +646,11 @@ slots_for_display = []
 
 for s in available_slots:
     try:
-        czas_przed = int(st.session_state.get("czas_rezerwowy_przed", 90))
-        czas_po = int(st.session_state.get("czas_rezerwowy_po", 90))
+        czas_przed = int(st.session_state.get("czas_rezerwowy_przed", 30))
+        czas_po = int(st.session_state.get("czas_rezerwowy_po", 30))
     except Exception:
-        czas_przed = 90
-        czas_po = 90
+        czas_przed = 30
+        czas_po = 30
 
     for brygada in s.get("brygady", []):
         wh_start, wh_end = st.session_state.working_hours.get(brygada, (DEFAULT_WORK_START, DEFAULT_WORK_END))
