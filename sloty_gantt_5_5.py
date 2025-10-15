@@ -642,6 +642,11 @@ else:
     selectbox_index = 0
     st.session_state.slot_type_name = slot_names[0]
 
+    st.session_state.slot_type_select_key += 1  # <-- wymuś nowy klucz selectboxa
+
+selectbox_index = slot_names.index(st.session_state.slot_type_name)
+
+# Selectbox z dynamicznym kluczem
 slot_type_name = st.selectbox(
     "Typ slotu",
     slot_names,
