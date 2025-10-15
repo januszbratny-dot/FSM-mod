@@ -633,6 +633,15 @@ if not slot_names:
 if "slot_type_name" not in st.session_state or st.session_state.get("slot_type_reset", False):
     st.session_state.slot_type_name = weighted_choice(st.session_state.slot_types) or slot_names[0]
     st.session_state.slot_type_reset = False
+    st.session_state.slot_type_select_key += 1  # wymuś nowy klucz selectboxa
+
+# Bezpieczne wyznaczanie indeksu
+if st.session_state.slot_type_name in slot_names:
+    selectbox_index = slot_names.index(st.session_state.slot_type_name)
+else:
+    selectbox_index = 0
+    st.session_state.slot_type_name = slot_names[0]
+
     st.session_state.slot_type_select_key += 1  # <-- wymuś nowy klucz selectboxa
 
 selectbox_index = slot_names.index(st.session_state.slot_type_name)
