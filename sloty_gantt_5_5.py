@@ -443,9 +443,12 @@ def get_week_days(reference_day: date) -> List[date]:
 
 def get_available_slots_for_day(day: date, slot_minutes: int, step_minutes: int = SEARCH_STEP_MINUTES) -> List[Dict]:
     """Zwraca sloty, które można przydzielić na początku/końcu dnia pracy
-    lub które bezpośrednio sąsiadują z już zarezerwowanymi slotami."""
+    lub które bezpośrednio sąsiadują z już zarezerwowanymi slotami.
+    Uwzględnia parametr overbooking (w minutach).
+    """
 
     available_slots = []
+    overbooking = int(st.session_state.get("overbooking", 0))
 
     for brygada, working_hours in st.session_state.working_hours.items():
         wh_start, wh_end = working_hours
@@ -478,8 +481,8 @@ def get_available_slots_for_day(day: date, slot_minutes: int, step_minutes: int 
                 if before_start >= wh_start_dt:
                     candidates.append((before_start, before_end))
 
-                # Slot po istniejącym
-                after_start = s[1]
+                # Slot po istniejącym (uwzględnij overbooking)
+                after_start = s[1] - timedelta(minutes=overbooking)
                 after_end = after_start + timedelta(minutes=slot_minutes)
                 if after_end <= wh_end_dt:
                     candidates.append((after_start, after_end))
@@ -504,7 +507,7 @@ def get_available_slots_for_day(day: date, slot_minutes: int, step_minutes: int 
         valid = []
         for c_start, c_end in candidates:
             overlaps = any(
-                not (c_end <= u_start or c_start >= u_end)
+                not (c_end <= u_start or c_start >= u_end - timedelta(minutes=overbooking))
                 for u_start, u_end in used_intervals
             )
             if not overlaps:
@@ -544,6 +547,13 @@ st.title("📅 Harmonogram slotów - Tydzień")
 with st.sidebar:
     st.subheader("⚙️ Konfiguracja")
 
+    # --- POPRAWIONE: parametr overbooking ---
+    st.markdown("#### Overbooking (minuty)")
+    st.number_input(
+        "Pozwól na rozpoczęcie kolejnego zadania przed zakończeniem poprzedniego o (minuty)",
+        min_value=0, max_value=120, value=0, step=1, key="overbooking"
+    )
+
     # slot types editor with validation
     txt = st.text_area("Typy slotów (format: Nazwa, minuty, waga)",
                        value="\n".join(f"{s['name']},{s['minutes']},{s.get('weight',1)}" for s in st.session_state.slot_types))
@@ -579,10 +589,10 @@ with st.sidebar:
     st.subheader("🕓 Czas rezerwowy (przyjazd Brygady)")
     st.write("Ustaw w minutach: przed i po czasie rozpoczęcia slotu.")
     st.session_state.czas_rezerwowy_przed = st.number_input(
-        "Czas rezerwowy przed (minuty)", min_value=0, max_value=180, value=30, step=5, key="czas_przed"
+        "Czas rezerwowy przed (minuty)", min_value=0, max_value=180, value=90, step=5, key="czas_przed"
     )
     st.session_state.czas_rezerwowy_po = st.number_input(
-        "Czas rezerwowy po (minuty)", min_value=0, max_value=180, value=30, step=5, key="czas_po"
+        "Czas rezerwowy po (minuty)", min_value=0, max_value=180, value=90, step=5, key="czas_po"
     )
 
 # week navigation
@@ -609,16 +619,39 @@ with st.container():
     default_client = f"Klient {st.session_state.client_counter}"
     client_name = st.text_input("Nazwa klienta", value=default_client)
 
-# Wybór typu slotu (pozostawiamy)
+# Wybór typu slotu (zawsze pokazuje aktualny wybór, nie losuje automatycznie)
+# Inicjalizacja licznika klucza selectboxa
+if "slot_type_select_key" not in st.session_state:
+    st.session_state.slot_type_select_key = 0
+
 slot_names = [s["name"] for s in st.session_state.slot_types]
 if not slot_names:
     slot_names = ["Standard"]
     st.session_state.slot_types = [{"name": "Standard", "minutes": 60, "weight": 1.0}]
-auto_type = weighted_choice(st.session_state.slot_types) or slot_names[0]
-idx = slot_names.index(auto_type) if auto_type in slot_names else 0
-slot_type_name = st.selectbox("Typ slotu", slot_names, index=idx)
-slot_type = next((s for s in st.session_state.slot_types if s["name"] == slot_type_name), slot_names[0])
+
+# Losuj typ slotu tylko po rezerwacji (slot_type_reset)
+if "slot_type_name" not in st.session_state or st.session_state.get("slot_type_reset", False):
+    st.session_state.slot_type_name = weighted_choice(st.session_state.slot_types) or slot_names[0]
+    st.session_state.slot_type_reset = False
+    st.session_state.slot_type_select_key += 1  # <-- wymuś nowy klucz selectboxa
+
+selectbox_index = slot_names.index(st.session_state.slot_type_name)
+
+# Selectbox z dynamicznym kluczem
+slot_type_name = st.selectbox(
+    "Typ slotu",
+    slot_names,
+    index=selectbox_index,
+    key=f"slot_type_select_{st.session_state.slot_type_select_key}"
+)
+
+# Zapamiętaj wybór użytkownika tylko jeśli zmienił
+if slot_type_name != st.session_state.slot_type_name:
+    st.session_state.slot_type_name = slot_type_name
+
+slot_type = next((s for s in st.session_state.slot_types if s["name"] == slot_type_name), st.session_state.slot_types[0])
 slot_duration = timedelta(minutes=slot_type["minutes"])
+slot_minutes = slot_type["minutes"]
 
 # Navigator dni dla rezerwacji (pojedynczy dzień, z możliwością przejścia)
 if "booking_day" not in st.session_state:
@@ -704,21 +737,22 @@ else:
     
     for i, s in enumerate(slots_for_display):
         col0, col1, col2, col3 = st.columns([2, 2, 2, 1])
-    
+
         col0.write(f"🛠️ Slot pracy: {s['start'].strftime('%H:%M')} – {s['end'].strftime('%H:%M')}")
         col1.write(f"🚗 Przedział przyjazdu: {s['arrival_window_start'].strftime('%H:%M')} – {s['arrival_window_end'].strftime('%H:%M')}")
         col2.write(f"👷 Brygada: {s['brygada']}")
-    
+
         if col3.button("Zarezerwuj w tym slocie", key=f"book_{i}"):
             slot = {
                 "start": s["start"],
                 "end": s["end"],
-                "slot_type": slot_type_name,
+                "slot_type": st.session_state.slot_type_name,
                 "duration_min": slot_minutes,
                 "client": client_name,
             }
             add_slot_to_brygada(s["brygada"], booking_day, slot)
             st.session_state.client_counter += 1
+            st.session_state.slot_type_reset = True  # <-- wymuś losowanie przy kolejnym rerunie
             st.success(f"✅ Zarezerwowano slot {s['start'].strftime('%H:%M')}–{s['end'].strftime('%H:%M')} w brygadzie {s['brygada']}.")
             st.rerun()
 
@@ -1052,7 +1086,7 @@ def _run_basic_tests():
     ok1, slot1 = schedule_client_immediately("A", "T30", test_day, time(8, 0), time(10, 0))
     ok2, slot2 = schedule_client_immediately("B", "T30", test_day, time(8, 0), time(10, 0))
     ok3, slot3 = schedule_client_immediately("C", "T30", test_day, time(8, 0), time(10, 0))
-    # 2 slots fit in 2 hours if step 30 -> actually 4 slots, depending on step; just check no crash
+    # 2 slots fit in 2 hours if search step 30 -> actually 4 slots, depending on search step; just check no crash
     if not ok1 or not ok2:
         errors.append("Scheduling basic failed")
 
@@ -1133,8 +1167,6 @@ if not df_dual_day.empty:
     st.plotly_chart(fig_day, use_container_width=True)
 else:
     st.info("Brak slotów do wyświetlenia dla wybranego dnia.")
-
-#--------------
 
 
 
